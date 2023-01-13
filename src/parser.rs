@@ -29,57 +29,143 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
         ..Default::default()
     };
     let mut content = content.split("[Events]");
-    let mut tabular = content.next().unwrap().lines();
+    let mut tabular = content.next().expect("at tabular assignment").lines();
     map.file_format = tabular
         .next()
-        .unwrap()
+        .expect("at map.file_format assignment (1 deep)")
         .split("v")
         .last()
-        .unwrap()
+        .expect("at map.file_format assignment (2 deep)")
         .trim()
         .parse::<i32>()
-        .unwrap();
+        .expect("at map.file_format assignment (3 deep)");
     for line in tabular {
         if line.starts_with("[") || line.trim().is_empty() {
             // Filter out junk lines.
             continue;
         }
-        let line = line.split_once(":").unwrap();
+        let line = line.split_once(":").expect("at line splitting in tabular");
         let key = line.0.trim();
         let value = line.1.trim();
         match key {
             "AudioFilename" => map.audio_filename = Some(value.to_string()),
-            "AudioLeadIn" => map.audio_lead_in = value.parse::<i32>().unwrap(),
+            "AudioLeadIn" => {
+                map.audio_lead_in = value
+                    .parse::<i32>()
+                    .expect("at map.audio_lead_in assignment in tabular")
+            }
             "AudioHash" => map.audio_hash = Some(value.to_string()),
-            "PreviewTime" => map.preview_time = value.parse::<i32>().unwrap(),
-            "Countdown" => map.countdown = value.parse::<Countdown>().unwrap(),
-            "SampleSet" => map.sample_set = value.parse::<SampleSet>().unwrap(),
-            "StackLeniency" => map.stack_leniency = value.parse::<f32>().unwrap(),
-            "Mode" => map.mode = value.parse::<Mode>().unwrap(),
-            "LetterboxInBreaks" => map.letterbox_in_breaks = value.parse::<bool>().unwrap(),
-            "StoryFireInFront" => map.story_fire_in_front = value.parse::<bool>().unwrap(),
-            "UseSkinSprites" => map.use_skin_sprites = value.parse::<bool>().unwrap(),
-            "AlwaysShowPlayField" => map.always_show_play_field = value.parse::<bool>().unwrap(),
-            "OverlayPosition" => map.overlay_position = value.parse::<OverlayPosition>().unwrap(),
+            "PreviewTime" => {
+                map.preview_time = value
+                    .parse::<i32>()
+                    .expect("at map.preview_time assignment in tabular")
+            }
+            "Countdown" => {
+                map.countdown = value
+                    .parse::<Countdown>()
+                    .expect("at map.countdown assignment in tabular")
+            }
+            "SampleSet" => {
+                map.sample_set = value
+                    .parse::<SampleSet>()
+                    .expect("at map.sample_set assignment in tabular")
+            }
+            "StackLeniency" => {
+                map.stack_leniency = value
+                    .parse::<f32>()
+                    .expect("at map.stack_leniency assignment in tabular")
+            }
+            "Mode" => {
+                map.mode = value
+                    .parse::<Mode>()
+                    .expect("at map.mode assignment in tabular")
+            }
+            "LetterboxInBreaks" => {
+                map.letterbox_in_breaks = value
+                    .parse::<bool>()
+                    .expect("at map.letterbox_in_breaks assignment in tabular")
+            }
+            "StoryFireInFront" => {
+                map.story_fire_in_front = value
+                    .parse::<bool>()
+                    .expect("at map.story_fire_in_front assignment in tabular")
+            }
+            "UseSkinSprites" => {
+                map.use_skin_sprites = value
+                    .parse::<bool>()
+                    .expect("at map.use_skin_sprites assignment in tabular")
+            }
+            "AlwaysShowPlayField" => {
+                map.always_show_play_field = value
+                    .parse::<bool>()
+                    .expect("at map.always_show_play_field assignment in tabular")
+            }
+            "OverlayPosition" => {
+                map.overlay_position = value
+                    .parse::<OverlayPosition>()
+                    .expect("at map.overlay_position assignment in tabular")
+            }
             "SkinPreference" => map.skin_preference = Some(value.to_string()),
-            "EpilepsyWarning" => map.epilepsy_warning = value.parse::<bool>().unwrap(),
-            "CountdownOffset" => map.countdown_offset = value.parse::<i32>().unwrap(),
-            "SpecialStyle" => map.special_style = value.parse::<bool>().unwrap(),
-            "WidescreenStoryboard" => map.widescreen_storyboard = value.parse::<bool>().unwrap(),
+            "EpilepsyWarning" => {
+                map.epilepsy_warning = value
+                    .parse::<bool>()
+                    .expect("at map.epilepsy_warning assignment in tabular")
+            }
+            "CountdownOffset" => {
+                map.countdown_offset = value
+                    .parse::<i32>()
+                    .expect("at map.countdown_offset assignment in tabular")
+            }
+            "SpecialStyle" => {
+                map.special_style = value
+                    .parse::<bool>()
+                    .expect("at map.special_style assignment in tabular")
+            }
+            "WidescreenStoryboard" => {
+                map.widescreen_storyboard = value
+                    .parse::<bool>()
+                    .expect("at map.widescreen_storyboard assignment in tabular")
+            }
             "SamplesMatchPlaybackRate" => {
-                map.samples_match_playback_rate = value.parse::<bool>().unwrap()
+                map.samples_match_playback_rate = value
+                    .parse::<bool>()
+                    .expect("at map.samples_match_playback_rate assignment in tabular")
             }
             "Bookmarks" => {
                 let mut bookmarks = Vec::new();
                 for i in value.split(',') {
-                    bookmarks.push(i.parse::<i32>().unwrap());
+                    bookmarks.push(i.parse::<i32>().expect("at bookmarks pushing in tabular"));
                 }
                 map.bookmarks = Some(bookmarks);
             }
-            "DistanceSpacing" => map.distance_spacing = Some(value.parse::<f32>().unwrap()),
-            "BeatDivisor" => map.beat_divisor = Some(value.parse::<i32>().unwrap()),
-            "GridSize" => map.grid_size = Some(value.parse::<i32>().unwrap()),
-            "TimelineZoom" => map.timeline_zoom = Some(value.parse::<f32>().unwrap()),
+            "DistanceSpacing" => {
+                map.distance_spacing = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.distance_spacing assignment in tabular"),
+                )
+            }
+            "BeatDivisor" => {
+                map.beat_divisor = Some(
+                    value
+                        .parse::<i32>()
+                        .expect("at map.beat_divisor assignment in tabular"),
+                )
+            }
+            "GridSize" => {
+                map.grid_size = Some(
+                    value
+                        .parse::<i32>()
+                        .expect("at map.grid_size assignment in tabular"),
+                )
+            }
+            "TimelineZoom" => {
+                map.timeline_zoom = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.timeline_zoom assignment in tabular"),
+                )
+            }
             "Title" => map.title = Some(value.to_string()),
             "TitleUnicode" => map.title_unicode = Some(value.to_string()),
             "Artist" => map.artist = Some(value.to_string()),
@@ -97,28 +183,82 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 }
                 map.tags = Some(tags);
             }
-            "BeatmapID" => map.beatmap_id = Some(value.parse::<i32>().unwrap()),
-            "BeatmapSetID" => map.beatmap_set_id = Some(value.parse::<i32>().unwrap()),
-            "HPDrainRate" => map.hpdrain_rate = Some(value.parse::<f32>().unwrap()),
-            "CircleSize" => map.circle_size = Some(value.parse::<f32>().unwrap()),
-            "OverallDifficulty" => map.overall_difficulty = Some(value.parse::<f32>().unwrap()),
-            "ApproachRate" => map.approach_rate = Some(value.parse::<f32>().unwrap()),
-            "SliderMultiplier" => map.slider_multiplier = Some(value.parse::<f32>().unwrap()),
-            "SliderTickRate" => map.slider_tick_rate = Some(value.parse::<f32>().unwrap()),
+            "BeatmapID" => {
+                map.beatmap_id = Some(
+                    value
+                        .parse::<i32>()
+                        .expect("at map.beatmap_id assignment in tabular"),
+                )
+            }
+            "BeatmapSetID" => {
+                map.beatmap_set_id = Some(
+                    value
+                        .parse::<i32>()
+                        .expect("at map.beatmap_set_id assignment in tabular"),
+                )
+            }
+            "HPDrainRate" => {
+                map.hpdrain_rate = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.hpdrain_rate assignment in tabular"),
+                )
+            }
+            "CircleSize" => {
+                map.circle_size = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.circle_size assignment in tabular"),
+                )
+            }
+            "OverallDifficulty" => {
+                map.overall_difficulty = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.overall_difficulty assignment in tabular"),
+                )
+            }
+            "ApproachRate" => {
+                map.approach_rate = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.approach_rate assignment in tabular"),
+                )
+            }
+            "SliderMultiplier" => {
+                map.slider_multiplier = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.slider_multiplier assignment in tabular"),
+                )
+            }
+            "SliderTickRate" => {
+                map.slider_tick_rate = Some(
+                    value
+                        .parse::<f32>()
+                        .expect("at map.slider_tick_rate assignment in tabular"),
+                )
+            }
             _ => panic!("Unknown key: {}", key),
         }
     }
-    let mut mixed = content.next().unwrap().split("[TimingPoints]");
-    let events = mixed.next().unwrap().lines();
+    let mut mixed = content
+        .next()
+        .expect("at mixed assignment after tabular")
+        .split("[TimingPoints]");
+    let events = mixed.next().expect("at events assignment").lines();
     for line in events {
         if line.starts_with("//") || line.trim().is_empty() {
             // Filter out junk lines.
             continue;
         }
-        match line.chars().next().unwrap() {
+        match line.chars().next().expect("at match first event line char") {
             '0' => {
                 // Background event.
-                map.background = Some(line.parse::<Background>().unwrap());
+                map.background = Some(
+                    line.parse::<Background>()
+                        .expect("at map.background assignment"),
+                );
             }
             '2' => {
                 // Break event.
@@ -127,20 +267,20 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 }
                 map.breaks
                     .as_mut()
-                    .unwrap()
-                    .push(line.parse::<Break>().unwrap());
+                    .expect("at map.breaks grabbing")
+                    .push(line.parse::<Break>().expect("at map.breaks pushing"));
             }
             _ => {}
         }
     }
-    let mixed = mixed.next().unwrap();
+    let mixed = mixed.next().expect("at mixed assignment after events");
     let colours_exists = mixed.contains("[Colours]");
     let mut mixed = mixed.split(if colours_exists {
         "[Colours]"
     } else {
         "[HitObjects]"
     });
-    let timing_points = mixed.next().unwrap().lines();
+    let timing_points = mixed.next().expect("at timing_points assignment").lines();
     for line in timing_points {
         if line.trim().is_empty() {
             // Filter out junk lines.
@@ -151,12 +291,18 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
         }
         map.timing_points
             .as_mut()
-            .unwrap()
-            .push(line.parse::<TimingPoint>().unwrap());
+            .expect("at map.timing_points grabbing")
+            .push(
+                line.parse::<TimingPoint>()
+                    .expect("at map.timing_points pushing"),
+            );
     }
     if colours_exists {
-        let mut mixed = mixed.next().unwrap().split("[HitObjects]");
-        let colours = mixed.next().unwrap().lines();
+        let mut mixed = mixed
+            .next()
+            .expect("at mixed assignment in colours")
+            .split("[HitObjects]");
+        let colours = mixed.next().expect("at colours assignment").lines();
         for line in colours {
             if line.trim().is_empty() {
                 // Filter out junk lines.
@@ -167,18 +313,18 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
             }
             map.colors
                 .as_mut()
-                .unwrap()
-                .push(line.parse::<Color>().unwrap());
+                .expect("at map.colors grabbing")
+                .push(line.parse::<Color>().expect("at map.colors pushing"));
         }
     }
-    let hit_objects = mixed.next().unwrap().lines();
+    let hit_objects = mixed.next().expect("at hit_objects assignment").lines();
     for line in hit_objects {
         match line
             .split(',')
             .nth(3)
-            .unwrap()
+            .expect("at type indexing for hit object classification")
             .parse::<Type>()
-            .unwrap()
+            .expect("at type parsing for hit object classification")
             .object_type
         {
             ObjectType::Circle => {
@@ -187,8 +333,8 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 }
                 map.circles
                     .as_mut()
-                    .unwrap()
-                    .push(line.parse::<Circle>().unwrap());
+                    .expect("at map.circles grabbing")
+                    .push(line.parse::<Circle>().expect("at map.circles pushing"));
             }
             ObjectType::Slider => {
                 if map.sliders.is_none() {
@@ -196,8 +342,8 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 }
                 map.sliders
                     .as_mut()
-                    .unwrap()
-                    .push(line.parse::<Slider>().unwrap());
+                    .expect("at map.sliders grabbing")
+                    .push(line.parse::<Slider>().expect("at map.sliders pushing"));
             }
             ObjectType::Spinner => {
                 if map.spinners.is_none() {
@@ -205,8 +351,8 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 }
                 map.spinners
                     .as_mut()
-                    .unwrap()
-                    .push(line.parse::<Spinner>().unwrap());
+                    .expect("at map.spinners grabbing")
+                    .push(line.parse::<Spinner>().expect("at map.spinners pushing"));
             }
         }
     }
@@ -441,13 +587,24 @@ impl FromStr for Background {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Background event
         let mut line = s.split(',').skip(2);
-        let mut background = line.next().unwrap().chars();
+        let mut background = line
+            .next()
+            .expect("at background assignment in Background parsing")
+            .chars();
         background.next();
         background.next_back();
         // Remove quotes
         let background = background.as_str().to_string();
-        let x = line.next().unwrap_or("0").parse::<i32>().unwrap();
-        let y = line.next().unwrap_or("0").parse::<i32>().unwrap();
+        let x = line
+            .next()
+            .unwrap_or("0")
+            .parse::<i32>()
+            .expect("at x assignment in Background parsing");
+        let y = line
+            .next()
+            .unwrap_or("0")
+            .parse::<i32>()
+            .expect("at y assignment in Background parsing");
         Ok(Self {
             filename: background,
             xoffset: x,
@@ -473,8 +630,16 @@ impl FromStr for Break {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',').skip(1);
-        let start_time = line.next().unwrap().parse::<i32>().unwrap();
-        let end_time = line.next().unwrap().parse::<i32>().unwrap();
+        let start_time = line
+            .next()
+            .expect("at start_time assignment in Break parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing of start_time in Break parsing");
+        let end_time = line
+            .next()
+            .expect("at end_time assignment in Break parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing of end_time in Break parsing");
         Ok(Self {
             start_time,
             end_time,
@@ -537,8 +702,16 @@ impl FromStr for TimingPoint {
         match s.matches(',').count() {
             1 => {
                 let mut line = s.split(',');
-                let time = line.next().unwrap().parse::<i32>().unwrap();
-                let beat_length = line.next().unwrap().parse::<f32>().unwrap();
+                let time = line
+                    .next()
+                    .expect("at time assignment in TimingPoint parsing, 1 branch")
+                    .parse::<i32>()
+                    .expect("at i32 parsing of time in TimingPoint parsing, 1 branch");
+                let beat_length = line
+                    .next()
+                    .expect("at beat_length assignment in TimingPoint parsing, 1 branch")
+                    .parse::<f32>()
+                    .expect("at f32 parsing of beat_length in TimingPoint parsing, 1 branch");
                 Ok(Self {
                     time,
                     beat_length,
@@ -547,13 +720,42 @@ impl FromStr for TimingPoint {
             }
             6 => {
                 let mut line = s.split(',');
-                let time = line.next().unwrap().parse::<i32>().unwrap();
-                let beat_length = line.next().unwrap().parse::<f32>().unwrap();
-                let meter = line.next().unwrap().parse::<i32>().unwrap();
-                let sample_set = line.next().unwrap().parse::<SampleSet>().unwrap();
-                let volume = line.next().unwrap().parse::<i32>().unwrap();
-                let uninherited = line.next().unwrap().parse::<i32>().unwrap() == 1;
-                let effects = line.next().unwrap().parse::<Effects>().unwrap();
+                let time = line
+                    .next()
+                    .expect("at time assignment in TimingPoint parsing, 6 branch")
+                    .parse::<i32>()
+                    .expect("at i32 parsing of time in TimingPoint parsing, 6 branch");
+                let beat_length = line
+                    .next()
+                    .expect("at beat_length assignment in TimingPoint parsing, 6 branch")
+                    .parse::<f32>()
+                    .expect("at f32 parsing of beat_length in TimingPoint parsing, 6 branch");
+                let meter = line
+                    .next()
+                    .expect("at meter assignment in TimingPoint parsing, 6 branch")
+                    .parse::<i32>()
+                    .expect("at i32 parsing of meter in TimingPoint parsing, 6 branch");
+                let sample_set = line
+                    .next()
+                    .expect("at sample_set assignment in TimingPoint parsing, 6 branch")
+                    .parse::<SampleSet>()
+                    .expect("at SampleSet parsing of sample_set in TimingPoint parsing, 6 branch");
+                let volume = line
+                    .next()
+                    .expect("at volume assignment in TimingPoint parsing, 6 branch")
+                    .parse::<i32>()
+                    .expect("at i32 parsing of volume in TimingPoint parsing, 6 branch");
+                let uninherited = line
+                    .next()
+                    .expect("at uninherited assignment in TimingPoint parsing, 6 branch")
+                    .parse::<i32>()
+                    .expect("at i32 parsing of uninherited in TimingPoint parsing, 6 branch")
+                    == 1;
+                let effects = line
+                    .next()
+                    .expect("at effects assignment in TimingPoint parsing, 6 branch")
+                    .parse::<Effects>()
+                    .expect("at Effects parsing of effects in TimingPoint parsing, 6 branch");
                 Ok(Self {
                     time,
                     beat_length,
@@ -578,10 +780,27 @@ pub struct Color {
 impl FromStr for Color {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut line = s.split(" : ").skip(1).next().unwrap().split(',');
-        let red = line.next().unwrap().parse::<u8>().unwrap();
-        let green = line.next().unwrap().parse::<u8>().unwrap();
-        let blue = line.next().unwrap().parse::<u8>().unwrap();
+        let mut line = s
+            .split(" : ")
+            .skip(1)
+            .next()
+            .expect("at line assignment in Color parsing")
+            .split(',');
+        let red = line
+            .next()
+            .expect("in red assignment in Color parsing")
+            .parse::<u8>()
+            .expect("at u8 parsing of red in Color parsing");
+        let green = line
+            .next()
+            .expect("in green assignment in Color parsing")
+            .parse::<u8>()
+            .expect("at u8 parsing of green in Color parsing");
+        let blue = line
+            .next()
+            .expect("in blue assignment in Color parsing")
+            .parse::<u8>()
+            .expect("at u8 parsing of blue in Color parsing");
         Ok(Self { red, green, blue })
     }
 }
@@ -608,7 +827,9 @@ pub struct Type {
 impl FromStr for Type {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut num: i32 = s.parse().unwrap();
+        let mut num: i32 = s
+            .parse()
+            .expect("at num assignment and i32 parsing in Type parsing");
         let mut bits = [false; 8];
         if num > 2 ^ 8 - 1 {
             panic!("Invalid Type");
@@ -682,7 +903,9 @@ pub struct HitSound {
 impl FromStr for HitSound {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut num: i32 = s.parse().unwrap();
+        let mut num: i32 = s
+            .parse()
+            .expect("at num assignment and i32 parsing in HitSound parsing");
         let mut bits = [false; 8];
         if num > 2 ^ 4 - 1 {
             panic!("Invalid HitSound");
@@ -737,15 +960,41 @@ impl Default for HitSample {
 impl FromStr for HitSample {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let values = s.split_once(":").unwrap();
-        let normal_set = values.0.parse::<SampleSet>().unwrap();
-        let values = values.1.split_once(":").unwrap();
-        let addition_set = values.0.parse::<SampleSet>().unwrap();
-        let values = values.1.split_once(":").unwrap();
-        let index = values.0.parse::<i32>().unwrap();
-        let values = values.1.split_once(":").unwrap();
-        let volume = values.0.parse::<i32>().unwrap();
-        let values = values.1.split_once(":").unwrap();
+        let values = s
+            .split_once(":")
+            .expect("at values assignment before normal_set in HitSample parsing");
+        let normal_set = values
+            .0
+            .parse::<SampleSet>()
+            .expect("at normal_set assignment with SampleSet parsing in HitSample parsing");
+        let values = values
+            .1
+            .split_once(":")
+            .expect("at values assignment before addition_set in HitSample parsing");
+        let addition_set = values
+            .0
+            .parse::<SampleSet>()
+            .expect("at addition_set assignment with SampleSet parsing in HitSample parsing");
+        let values = values
+            .1
+            .split_once(":")
+            .expect("at values assignment before index in HitSample parsing");
+        let index = values
+            .0
+            .parse::<i32>()
+            .expect("at index assignment with i32 parsing in HitSample parsing");
+        let values = values
+            .1
+            .split_once(":")
+            .expect("at values assignment before volume in HitSample parsing");
+        let volume = values
+            .0
+            .parse::<i32>()
+            .expect("at volume assignment with i32 parsing in HitSample parsing");
+        let values = values
+            .1
+            .split_once(":")
+            .expect("at values assignment before filename in HitSample parsing");
         let filename = if values.1.trim().is_empty() {
             None
         } else {
@@ -774,19 +1023,35 @@ impl FromStr for Circle {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',');
-        let hit_sample = // if s.contains(":") {
-        //     line.last().unwrap().parse::<HitSample>().unwrap()
-        // } else {
-            HitSample {
-                ..Default::default()
-            };
-        // };
+        let hit_sample = HitSample {
+            ..Default::default()
+        };
         // TODO: Parse HitSamples
-        let x = line.next().unwrap().parse::<i32>().unwrap();
-        let y = line.next().unwrap().parse::<i32>().unwrap();
-        let time = line.next().unwrap().parse::<i32>().unwrap();
-        let flags = line.next().unwrap().parse::<Type>().unwrap();
-        let hit_sound = line.next().unwrap().parse::<HitSound>().unwrap();
+        let x = line
+            .next()
+            .expect("at x assignment in Circle parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing in x assignment in Circle parsing");
+        let y = line
+            .next()
+            .expect("at y assignment in Circle parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing in y assignment in Circle parsing");
+        let time = line
+            .next()
+            .expect("at time assignment in Circle parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing in time assignment in Circle parsing");
+        let flags = line
+            .next()
+            .expect("at flags assignment in Circle parsing")
+            .parse::<Type>()
+            .expect("at Type parsing in flags assignment in Circle parsing");
+        let hit_sound = line
+            .next()
+            .expect("at hit_sound assignment in Circle parsing")
+            .parse::<HitSound>()
+            .expect("at HitSound parsing in hit_sound assignment in Circle parsing");
         Ok(Circle {
             x,
             y,
@@ -833,13 +1098,25 @@ impl FromStr for Curve {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split('|');
-        let _type = line.next().unwrap().parse::<CurveType>().unwrap();
+        let _type = line
+            .next()
+            .expect("at _type assignment in Curve parsing")
+            .parse::<CurveType>()
+            .expect("at CurveType parsing in _type assignment in Curve parsing");
         let mut points = Vec::new();
         for pair in line {
             let mut pair = pair.split('|');
             points.push(Point {
-                x: pair.next().unwrap().parse::<i32>().unwrap(),
-                y: pair.next().unwrap().parse::<i32>().unwrap(),
+                x: pair
+                    .next()
+                    .expect("at x assignment in points pushing in Curve parsing")
+                    .parse::<i32>()
+                    .expect("at i32 parsing in x assignment in points pushing in Curve parsing"),
+                y: pair
+                    .next()
+                    .expect("at y assignment in points pushing in Curve parsing")
+                    .parse::<i32>()
+                    .expect("at i32 parsing in y assignment in points pushing in Curve parsing"),
             });
         }
         Ok(Self { _type, points })
@@ -864,58 +1141,109 @@ impl FromStr for Slider {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',');
-        let hit_sample = // if s.contains(":") {
-        //     line.last().unwrap().parse::<HitSample>().unwrap()
-        // } else {
-            HitSample {
-                ..Default::default()
-            };
-        // };
-        // TODO: Parse HitSamples
-        let x = line.next().unwrap().parse::<i32>().unwrap();
-        let y = line.next().unwrap().parse::<i32>().unwrap();
-        let time = line.next().unwrap().parse::<i32>().unwrap();
-        let flags = line.next().unwrap().parse::<Type>().unwrap();
-        let hit_sound = line.next().unwrap().parse::<HitSound>().unwrap();
+        let hit_sample = HitSample {
+            ..Default::default()
+        };
+        let x = line
+            .next()
+            .expect("in x assignment in Slider parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in x assignment in Slider parsing");
+        let y = line
+            .next()
+            .expect("in y assignment in Slider parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in y assignment in Slider parsing");
+        let time = line
+            .next()
+            .expect("in time assignment in Slider parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in time assignment in Slider parsing");
+        let flags = line
+            .next()
+            .expect("in flags assignment in Slider parsing")
+            .parse::<Type>()
+            .expect("in Type parsing in flags assignment in Slider parsing");
+        let hit_sound = line
+            .next()
+            .expect("in hit_sound assignment in Slider parsing")
+            .parse::<HitSound>()
+            .expect("in HitSound parsing in hit_sound assignment in Slider parsing");
         let collected = line.collect::<String>();
         let commas = collected.matches(',').count();
         let mut line = collected.split(',');
         let curve = match commas {
-            2 | 5 => line.next().unwrap().parse::<Curve>().unwrap(),
+            2 | 5 => line
+                .next()
+                .expect("in curve assignment in Slider parsing")
+                .parse::<Curve>()
+                .expect("in Curve parsing in curve assignment in Slider parsing"),
             _ => panic!("Invalid slider: wrong remaining line size ({})", commas),
         };
         let slides = match commas {
-            2 | 5 => line.next().unwrap().parse::<i32>().unwrap(),
+            2 | 5 => line
+                .next()
+                .expect("in slides assignment in Slider parsing")
+                .parse::<i32>()
+                .expect("in i32 parsing in slides assignment in Slider parsing"),
             _ => panic!("Invalid slider: wrong remaining line size ({})", commas),
         };
         let length = match commas {
-            2 | 5 => line.next().unwrap().parse::<f32>().unwrap(),
+            2 | 5 => line
+                .next()
+                .expect("in length assignment in Slider parsing")
+                .parse::<f32>()
+                .expect("in f32 parsing in length assignment in Slider parsing"),
             _ => panic!("Invalid slider: wrong remaining line size ({})", commas),
         };
         let edge_sounds = match commas {
             5 => {
                 let mut sounds = Vec::new();
-                for sound in line.next().unwrap().split('|') {
-                    sounds.push(sound.parse::<HitSound>().unwrap());
+                for sound in line
+                    .next()
+                    .expect("in sound assignment in edge_sounds assignment in Slider parsing")
+                    .split('|')
+                {
+                    sounds.push(
+                        sound
+                            .parse::<HitSound>()
+                            .expect("in sounds pushing with HitSound parsing in edge_sounds assignment in Slider parsing"),
+                    );
                 }
                 sounds
             }
             _ => vec![
-                "0".parse::<HitSound>().unwrap(),
-                "2".parse::<HitSound>().unwrap(),
+                "0".parse::<HitSound>().expect(
+                    "at edge_sounds assignment with HitSound parsing of \"0\" in Slider parsing",
+                ),
+                "2".parse::<HitSound>().expect(
+                    "at edge_sounds assignment with HitSound parsing of \"2\" in Slider parsing",
+                ),
             ],
         };
         let edge_sets = match commas {
             5 => {
                 let mut sounds = Vec::new();
-                for sound in line.next().unwrap().split('|') {
-                    sounds.push(sound.parse::<HitSample>().unwrap());
+                for sound in line
+                    .next()
+                    .expect("in sound assignment in edge_sets assignment in Slider parsing")
+                    .split('|')
+                {
+                    sounds.push(
+                        sound
+                            .parse::<HitSample>()
+                            .expect("in sounds pushing with HitSample parsing in edge_sets assignment in Slider parsing"),
+                    );
                 }
                 sounds
             }
             _ => vec![
-                "0:0".parse::<HitSample>().unwrap(),
-                "0:0".parse::<HitSample>().unwrap(),
+                "0:0".parse::<HitSample>().expect(
+                    "at edge_sets assignment with HitSample parsing of \"0:0\" in Slider parsing",
+                ),
+                "0:0".parse::<HitSample>().expect(
+                    "at edge_sets assignment with HitSample parsing of \"0:0\" in Slider parsing",
+                ),
             ],
         };
         Ok(Slider {
@@ -948,20 +1276,39 @@ impl FromStr for Spinner {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',');
-        let hit_sample = // if s.contains(":") {
-        //     line.last().unwrap().parse::<HitSample>().unwrap()
-        // } else {
-            HitSample {
-                ..Default::default()
-            };
-        // };
-        // TODO: Parse HitSamples
-        let x = line.next().unwrap().parse::<i32>().unwrap();
-        let y = line.next().unwrap().parse::<i32>().unwrap();
-        let time = line.next().unwrap().parse::<i32>().unwrap();
-        let flags = line.next().unwrap().parse::<Type>().unwrap();
-        let hit_sound = line.next().unwrap().parse::<HitSound>().unwrap();
-        let end_time = line.next().unwrap().parse::<i32>().unwrap();
+        let hit_sample = HitSample {
+            ..Default::default()
+        };
+        let x = line
+            .next()
+            .expect("in x assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in x assignment in Spinner parsing");
+        let y = line
+            .next()
+            .expect("in y assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in y assignment in Spinner parsing");
+        let time = line
+            .next()
+            .expect("in time assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in time assignment in Spinner parsing");
+        let flags = line
+            .next()
+            .expect("in flags assignment in Spinner parsing")
+            .parse::<Type>()
+            .expect("in Type parsing in flags assignment in Spinner parsing");
+        let hit_sound = line
+            .next()
+            .expect("in hit_sound assignment in Spinner parsing")
+            .parse::<HitSound>()
+            .expect("in HitSound parsing in hit_sound assignment in Spinner parsing");
+        let end_time = line
+            .next()
+            .expect("in end_time assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in end_time assignment in Spinner parsing");
         Ok(Spinner {
             x,
             y,
