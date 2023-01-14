@@ -402,7 +402,7 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
 
 /// Complete map data for a .osu file.
 /// Arranged like map ver 14.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MapData {
     pub file_format: i32,
     //[General]
@@ -539,7 +539,7 @@ impl Default for MapData {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum SampleSet {
     Default,
     Normal,
@@ -559,7 +559,7 @@ impl FromStr for SampleSet {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Countdown {
     None,
     Normal,
@@ -579,7 +579,7 @@ impl FromStr for Countdown {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Mode {
     Osu,
     Taiko,
@@ -599,7 +599,7 @@ impl FromStr for Mode {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum OverlayPosition {
     NoChange,
     Below,
@@ -617,7 +617,7 @@ impl FromStr for OverlayPosition {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Background {
     filename: String,
     xoffset: i32,
@@ -654,7 +654,7 @@ impl FromStr for Background {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Video {
     start_time: i32,
     filename: String,
@@ -662,7 +662,7 @@ pub struct Video {
     yoffset: i32,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Break {
     start_time: i32,
     end_time: i32,
@@ -688,7 +688,7 @@ impl FromStr for Break {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Effects {
     kiai: bool, // 1 on
     // 2 is unused
@@ -711,7 +711,7 @@ impl FromStr for Effects {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TimingPoint {
     time: i32,
     beat_length: f32,
@@ -821,7 +821,7 @@ impl FromStr for TimingPoint {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Color {
     red: u8,
     green: u8,
@@ -860,14 +860,14 @@ impl Color {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ObjectType {
     Circle,
     Slider,
     Spinner,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Type {
     object_type: ObjectType, // 0 circle, 1 slider, 3 spinner
     new_combo: bool,         // 2
@@ -943,7 +943,7 @@ impl FromStr for Type {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HitSound {
     normal: bool,
     whistle: bool,
@@ -988,7 +988,7 @@ impl FromStr for HitSound {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HalfHitSample {
     normal_set: SampleSet,
     addition_set: SampleSet,
@@ -1025,7 +1025,7 @@ impl FromStr for HalfHitSample {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HitSample {
     normal_set: SampleSet,
     addition_set: SampleSet,
@@ -1099,7 +1099,7 @@ impl FromStr for HitSample {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Circle {
     x: i32,
     y: i32,
@@ -1152,7 +1152,7 @@ impl FromStr for Circle {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum CurveType {
     Bezier,
     Centripetal,
@@ -1172,13 +1172,13 @@ impl FromStr for CurveType {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point {
     x: i32,
     y: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Curve {
     _type: CurveType,
     points: Vec<Point>,
@@ -1193,7 +1193,11 @@ impl FromStr for Curve {
             .parse::<CurveType>()
             .expect("at CurveType parsing in _type assignment in Curve parsing");
         let mut points = Vec::new();
+        let mut linear_stop = false;
         for pair in line {
+            if linear_stop {
+                panic!("Invalid Curve: Linear curve {} has more than 1 points", s)
+            }
             let mut pair = pair.split(':');
             points.push(Point {
                 x: pair
@@ -1213,12 +1217,15 @@ impl FromStr for Curve {
                         err, s
                     )),
             });
+            if _type == CurveType::Linear {
+                linear_stop = true;
+            }
         }
         Ok(Self { _type, points })
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Slider {
     x: i32,
     y: i32,
@@ -1366,7 +1373,7 @@ impl FromStr for Slider {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Spinner {
     x: i32,
     y: i32,
@@ -1429,17 +1436,172 @@ impl FromStr for Spinner {
 mod tests {
     use super::*;
 
+    fn catch_unwind_silent<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
+        f: F,
+    ) -> std::thread::Result<R> {
+        let prev_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let result = std::panic::catch_unwind(f);
+        std::panic::set_hook(prev_hook);
+        result
+    }
+
     #[test]
-    fn from_str_curve() {
-        let perfect_in = "P|282:209|239:210";
+    fn spinner_parse() {
+        // Spinner from ver 14.
+        assert_eq!(
+            "256,192,29544,12,0,32632,0:2:0:0:"
+                .parse::<Spinner>()
+                .unwrap(),
+            Spinner {
+                x: 256,
+                y: 192,
+                time: 29544,
+                flags: Type {
+                    object_type: ObjectType::Spinner,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false,
+                },
+                end_time: 32632,
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
+        // Spinner from ver 3.
+        assert_eq!(
+            "256,192,141619,12,0,143869".parse::<Spinner>().unwrap(),
+            Spinner {
+                x: 256,
+                y: 192,
+                time: 141619,
+                flags: Type {
+                    object_type: ObjectType::Spinner,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false,
+                },
+                end_time: 143869,
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
+        // Circle from ver 14.
+        assert!(catch_unwind_silent(|| "102,240,161,5,2,0:0:0:0:".parse::<Spinner>()).is_err());
+        // Circle from ver 3.
+        assert!(catch_unwind_silent(|| "96,64,8118,5,4,".parse::<Spinner>()).is_err());
+        // Slider from ver 14.
+        assert!(catch_unwind_silent(|| {
+            "137,72,2985,6,0,L|253:60,1,105.493329791992,2|0,0:2|0:2,0:0:0:0:".parse::<Spinner>()
+        })
+        .is_err());
+        // Slider from ver 3.
+        assert!(
+            catch_unwind_silent(|| "336,96,81368,2,4,L|336:96|336:0,1,70".parse::<Spinner>())
+                .is_err()
+        );
+        // Ensure that there is no trim during parsing.
+        assert!(catch_unwind_silent(|| " 256,192,141619,12,0,143869".parse::<Spinner>()).is_err());
+        assert!(catch_unwind_silent(|| "256,192,141619,12,0,143869 ".parse::<Spinner>()).is_err());
+    }
+
+    #[test]
+    fn curvetype_parse() {
+        let correct = [
+            ("B", CurveType::Bezier),
+            ("C", CurveType::Centripetal),
+            ("L", CurveType::Linear),
+            ("P", CurveType::Perfect),
+        ];
+        // Test correct inputs.
+        for pair in correct {
+            assert_eq!(pair.0.parse::<CurveType>().unwrap(), pair.1);
+        }
+        // Ensure that there is no trim during parsing.
+        let no_trim = [" B", " C", " L", " P", "B ", "C ", "L ", "P "];
+        for line in no_trim {
+            assert!(catch_unwind_silent(|| line.parse::<CurveType>()).is_err());
+        }
+    }
+
+    #[test]
+    fn curve_parse_perfect() {
         // TODO: Determine if there are rules for validating perfect curves
         // (and whether they are followed in real maps).
-        let bezier_in = "B|170:100|234:201|200:26";
-        // TODO: Determine if there are rules for validating bezier curves
+        assert_eq!(
+            "P|282:209|239:210".parse::<Curve>().unwrap(),
+            Curve {
+                _type: CurveType::Perfect,
+                points: vec![Point { x: 282, y: 209 }, Point { x: 239, y: 210 },]
+            },
+        );
+        assert!(catch_unwind_silent(|| " P|282:209|239:210".parse::<Curve>()).is_err());
+        assert!(catch_unwind_silent(|| "P|282:209|239:210 ".parse::<Curve>()).is_err());
+    }
+
+    #[test]
+    fn curve_parse_centripetal() {
+        // TODO: Determine if there are rules for validating centripetal curves
         // (and whether they are followed in real maps).
-        let linear_in = "L|0:0";
+        assert_eq!(
+            "C|240:288|352:240|464:224".parse::<Curve>().unwrap(),
+            Curve {
+                _type: CurveType::Centripetal,
+                points: vec![
+                    Point { x: 240, y: 288 },
+                    Point { x: 352, y: 240 },
+                    Point { x: 464, y: 224 },
+                ]
+            },
+        );
+        assert!(catch_unwind_silent(|| " C|240:288|352:240|464:224".parse::<Curve>()).is_err());
+        assert!(catch_unwind_silent(|| "C|240:288|352:240|464:224 ".parse::<Curve>()).is_err());
+    }
+
+    #[test]
+    fn curve_parse_bezier() {
+        assert_eq!(
+            "B|170:100|234:201|200:26".parse::<Curve>().unwrap(),
+            Curve {
+                _type: CurveType::Bezier,
+                points: vec![
+                    Point { x: 170, y: 100 },
+                    Point { x: 234, y: 201 },
+                    Point { x: 200, y: 26 },
+                ]
+            },
+        );
+        assert!(catch_unwind_silent(|| " B|170:100|234:201|200:26".parse::<Curve>()).is_err());
+        assert!(catch_unwind_silent(|| "B|170:100|234:201|200:26 ".parse::<Curve>()).is_err());
+    }
+
+    #[test]
+    fn curve_parse_linear() {
         // Linear has simple rules so I supply a fake curve point.
-        let bad_linear = "L|0:0|1:1";
-        // Linear curves should never had more than 1 point.
+        assert_eq!(
+            "L|0:0".parse::<Curve>().unwrap(),
+            Curve {
+                _type: CurveType::Linear,
+                points: vec![Point { x: 0, y: 0 },]
+            },
+        );
+        // Trim should be used in the top level only.
+        assert!(catch_unwind_silent(|| " L|0:0".parse::<Curve>()).is_err());
+        assert!(catch_unwind_silent(|| "L|0:0 ".parse::<Curve>()).is_err());
+
+        // Linear curves should never have more than 1 point.
+        assert!(catch_unwind_silent(|| "L|0:0|1:1".parse::<Curve>()).is_err());
     }
 }
