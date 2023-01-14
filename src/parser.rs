@@ -1333,7 +1333,7 @@ impl FromStr for Slider {
             ],
         };
         let edge_sets = match commas {
-            5 => {
+            6 => {
                 let mut sounds = Vec::new();
                 for sound in line
                     .next()
@@ -1444,6 +1444,76 @@ mod tests {
         let result = std::panic::catch_unwind(f);
         std::panic::set_hook(prev_hook);
         result
+    }
+
+    #[test]
+    fn slider_parse() {
+        // Linear slider from ver 14.
+        assert_eq!(
+            "137,72,2985,6,0,L|253:60,1,105.493329791992,2|0,0:2|0:2,0:0:0:0:"
+                .parse::<Slider>()
+                .unwrap(),
+            Slider {
+                x: 137,
+                y: 72,
+                time: 2985,
+                flags: Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false
+                },
+                curve: Curve {
+                    _type: CurveType::Linear,
+                    points: vec![Point { x: 253, y: 60 }],
+                },
+                slides: 1,
+                length: 105.493329791992,
+                edge_sounds: vec![
+                    HitSound {
+                        normal: false,
+                        whistle: true,
+                        finish: false,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                ],
+                edge_sets: vec![
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Soft
+                    },
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Soft
+                    },
+                ],
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        )
+        // Perfect slider from ver 14.
+        // Bezier slider from ver 14.
+        // Linear slider from ver 3.
+        // Perfect slider from ver 3.
+        // Bezier slider from ver 3.
+        // Centripetal slider.
+        // Circle from ver 14.
+        // Circle from ver 3.
+        // Spinner from ver 14.
+        // Spinner from ver 3.
+        // Ensure that trim is not used during parsing.
     }
 
     #[test]
