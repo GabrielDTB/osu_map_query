@@ -1424,3 +1424,22 @@ impl FromStr for Spinner {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_str_curve() {
+        let perfect_in = "P|282:209|239:210";
+        // TODO: Determine if there are rules for validating perfect curves
+        // (and whether they are followed in real maps).
+        let bezier_in = "B|170:100|234:201|200:26";
+        // TODO: Determine if there are rules for validating bezier curves
+        // (and whether they are followed in real maps).
+        let linear_in = "L|0:0";
+        // Linear has simple rules so I supply a fake curve point.
+        let bad_linear = "L|0:0|1:1";
+        // Linear curves should never had more than 1 point.
+    }
+}
