@@ -540,26 +540,6 @@ impl Default for MapData {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum SampleSet {
-    Default,
-    Normal,
-    Soft,
-    Drum,
-}
-impl FromStr for SampleSet {
-    type Err = Box<dyn std::error::Error>;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "0" | "Default" => Ok(SampleSet::Default),
-            "1" | "Normal" => Ok(SampleSet::Normal),
-            "2" | "Soft" => Ok(SampleSet::Soft),
-            "3" | "Drum" => Ok(SampleSet::Drum),
-            _ => panic!("Invalid str during SampleSet parsing: {}", s),
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Countdown {
     None,
     Normal,
@@ -654,14 +634,6 @@ impl FromStr for Background {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Video {
-    start_time: i32,
-    filename: String,
-    xoffset: i32,
-    yoffset: i32,
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Break {
     start_time: i32,
@@ -684,29 +656,6 @@ impl FromStr for Break {
         Ok(Self {
             start_time,
             end_time,
-        })
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Effects {
-    kiai: bool, // 1 on
-    // 2 is unused
-    ommit_barline: bool, // 4 on
-}
-impl FromStr for Effects {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (kiai, ommit_barline) = match s {
-            "0" => (false, false),
-            "1" => (true, false),
-            "4" => (false, true),
-            "5" => (true, true),
-            _ => panic!("Invalid effect"),
-        };
-        Ok(Self {
-            kiai,
-            ommit_barline,
         })
     }
 }
@@ -822,6 +771,29 @@ impl FromStr for TimingPoint {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Effects {
+    kiai: bool, // 1 on
+    // 2 is unused
+    ommit_barline: bool, // 4 on
+}
+impl FromStr for Effects {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (kiai, ommit_barline) = match s {
+            "0" => (false, false),
+            "1" => (true, false),
+            "4" => (false, true),
+            "5" => (true, true),
+            _ => panic!("Invalid effect"),
+        };
+        Ok(Self {
+            kiai,
+            ommit_barline,
+        })
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Color {
     red: u8,
     green: u8,
@@ -860,11 +832,271 @@ impl Color {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ObjectType {
-    Circle,
-    Slider,
-    Spinner,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Circle {
+    x: i32,
+    y: i32,
+    time: i32,
+    flags: Type,
+    hit_sound: HitSound,
+    hit_sample: HitSample,
+}
+impl FromStr for Circle {
+    type Err = Box<dyn std::error::Error>;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut line = s.split(',');
+        let hit_sample = HitSample {
+            ..Default::default()
+        };
+        // TODO: Parse HitSamples
+        let x = line
+            .next()
+            .expect("at x assignment in Circle parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing in x assignment in Circle parsing");
+        let y = line
+            .next()
+            .expect("at y assignment in Circle parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing in y assignment in Circle parsing");
+        let time = line
+            .next()
+            .expect("at time assignment in Circle parsing")
+            .parse::<i32>()
+            .expect("at i32 parsing in time assignment in Circle parsing");
+        let flags = line
+            .next()
+            .expect("at flags assignment in Circle parsing")
+            .parse::<Type>()
+            .expect("at Type parsing in flags assignment in Circle parsing");
+        let hit_sound = line
+            .next()
+            .expect("at hit_sound assignment in Circle parsing")
+            .parse::<HitSound>()
+            .expect("at HitSound parsing in hit_sound assignment in Circle parsing");
+        Ok(Circle {
+            x,
+            y,
+            time,
+            flags,
+            hit_sound,
+            hit_sample,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Slider {
+    x: i32,
+    y: i32,
+    time: i32,
+    flags: Type,
+    hit_sound: HitSound,
+    curve: Curve,
+    slides: i32,
+    length: f32,
+    edge_sounds: Vec<HitSound>,
+    edge_sets: Vec<HalfHitSample>,
+    hit_sample: HitSample,
+}
+impl FromStr for Slider {
+    type Err = Box<dyn std::error::Error>;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut line = s.split(',');
+        let x = line
+            .next()
+            .expect("in x assignment in Slider parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in x assignment in Slider parsing");
+        let y = line
+            .next()
+            .expect("in y assignment in Slider parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in y assignment in Slider parsing");
+        let time = line
+            .next()
+            .expect("in time assignment in Slider parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in time assignment in Slider parsing");
+        let flags = line
+            .next()
+            .expect("in flags assignment in Slider parsing")
+            .parse::<Type>()
+            .expect("in Type parsing in flags assignment in Slider parsing");
+        let hit_sound = line
+            .next()
+            .expect("in hit_sound assignment in Slider parsing")
+            .parse::<HitSound>()
+            .expect("in HitSound parsing in hit_sound assignment in Slider parsing");
+        let collected = line.collect::<Vec<&str>>();
+        let commas = collected.len();
+        let mut line = collected.into_iter();
+        let curve = match commas {
+            3 | 4 | 6 => line
+                .next()
+                .expect("in curve assignment in Slider parsing")
+                .parse::<Curve>()
+                .expect("in Curve parsing in curve assignment in Slider parsing"),
+            _ => panic!(
+                "Invalid slider: wrong remaining line size: {} in line: {} at curve assignment",
+                commas, s
+            ),
+        };
+        let slides = match commas {
+            3 | 4 | 6 => line
+                .next()
+                .expect("in slides assignment in Slider parsing")
+                .parse::<i32>()
+                .expect("in i32 parsing in slides assignment in Slider parsing"),
+            _ => panic!(
+                "Invalid slider: wrong remaining line size: {} in line: {} at slides assignment",
+                commas, s
+            ),
+        };
+        let length = match commas {
+            3 | 4 | 6 => line
+                .next()
+                .expect("in length assignment in Slider parsing")
+                .parse::<f32>()
+                .expect("in f32 parsing in length assignment in Slider parsing"),
+            _ => panic!(
+                "Invalid slider: wrong remaining line size: {} in line: {} at length assignment",
+                commas, s
+            ),
+        };
+        let edge_sounds = match commas {
+            4 | 6 => {
+                let mut sounds = Vec::new();
+                for sound in line
+                    .next()
+                    .expect("in sound assignment in edge_sounds assignment in Slider parsing")
+                    .split('|')
+                {
+                    sounds.push(
+                        sound
+                            .parse::<HitSound>()
+                            .expect("in sounds pushing with HitSound parsing in edge_sounds assignment in Slider parsing"),
+                    );
+                }
+                sounds
+            }
+            _ => vec![
+                "0".parse::<HitSound>().expect(
+                    "at edge_sounds assignment with HitSound parsing of \"0\" in Slider parsing",
+                ),
+                "2".parse::<HitSound>().expect(
+                    "at edge_sounds assignment with HitSound parsing of \"2\" in Slider parsing",
+                ),
+            ],
+        };
+        let edge_sets = match commas {
+            6 => {
+                let mut sounds = Vec::new();
+                for sound in line
+                    .next()
+                    .expect("in sound assignment in edge_sets assignment in Slider parsing")
+                    .split('|')
+                {
+                    sounds.push(
+                        sound
+                            .parse::<HalfHitSample>()
+                            .expect("in sounds pushing with HalfHitSample parsing in edge_sets assignment in Slider parsing"),
+                    );
+                }
+                sounds
+            }
+            _ => vec![
+                "0:0".parse::<HalfHitSample>().expect(
+                    "at edge_sets assignment with HalfHitSample parsing of \"0:0\" in Slider parsing",
+                ),
+                "0:0".parse::<HalfHitSample>().expect(
+                    "at edge_sets assignment with HalfHitSample parsing of \"0:0\" in Slider parsing",
+                ),
+            ],
+        };
+        let hit_sample = match commas {
+            6 => line
+                .next()
+                .expect("in hit_sample assignment in Slider parsing")
+                .parse::<HitSample>()
+                .expect("in HitSample parsing in hit_sample assignment in Slider parsing"),
+            _ => HitSample {
+                ..Default::default()
+            },
+        };
+        Ok(Slider {
+            x,
+            y,
+            time,
+            flags,
+            hit_sound,
+            curve,
+            slides,
+            length,
+            edge_sounds,
+            edge_sets,
+            hit_sample,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Spinner {
+    x: i32,
+    y: i32,
+    time: i32,
+    flags: Type,
+    hit_sound: HitSound,
+    end_time: i32,
+    hit_sample: HitSample,
+}
+impl FromStr for Spinner {
+    type Err = Box<dyn std::error::Error>;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut line = s.split(',');
+        let hit_sample = HitSample {
+            ..Default::default()
+        };
+        let x = line
+            .next()
+            .expect("in x assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in x assignment in Spinner parsing");
+        let y = line
+            .next()
+            .expect("in y assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in y assignment in Spinner parsing");
+        let time = line
+            .next()
+            .expect("in time assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in time assignment in Spinner parsing");
+        let flags = line
+            .next()
+            .expect("in flags assignment in Spinner parsing")
+            .parse::<Type>()
+            .expect("in Type parsing in flags assignment in Spinner parsing");
+        let hit_sound = line
+            .next()
+            .expect("in hit_sound assignment in Spinner parsing")
+            .parse::<HitSound>()
+            .expect("in HitSound parsing in hit_sound assignment in Spinner parsing");
+        let end_time = line
+            .next()
+            .expect("in end_time assignment in Spinner parsing")
+            .parse::<i32>()
+            .expect("in i32 parsing in end_time assignment in Spinner parsing");
+        Ok(Spinner {
+            x,
+            y,
+            time,
+            flags,
+            hit_sound,
+            end_time,
+            hit_sample,
+        })
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -941,6 +1173,13 @@ impl FromStr for Type {
             color_skip,
         })
     }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ObjectType {
+    Circle,
+    Slider,
+    Spinner,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1080,14 +1319,10 @@ impl FromStr for HitSample {
             .0
             .parse::<i32>()
             .expect("at volume assignment with i32 parsing in HitSample parsing");
-        let values = values
-            .1
-            .split_once(":")
-            .expect("at values assignment before filename in HitSample parsing");
         let filename = if values.1.trim().is_empty() {
             None
         } else {
-            Some(values.1.trim().to_string())
+            Some(values.1.to_string())
         };
         Ok(Self {
             normal_set,
@@ -1099,85 +1334,25 @@ impl FromStr for HitSample {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Circle {
-    x: i32,
-    y: i32,
-    time: i32,
-    flags: Type,
-    hit_sound: HitSound,
-    hit_sample: HitSample,
-}
-impl FromStr for Circle {
-    type Err = Box<dyn std::error::Error>;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut line = s.split(',');
-        let hit_sample = HitSample {
-            ..Default::default()
-        };
-        // TODO: Parse HitSamples
-        let x = line
-            .next()
-            .expect("at x assignment in Circle parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing in x assignment in Circle parsing");
-        let y = line
-            .next()
-            .expect("at y assignment in Circle parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing in y assignment in Circle parsing");
-        let time = line
-            .next()
-            .expect("at time assignment in Circle parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing in time assignment in Circle parsing");
-        let flags = line
-            .next()
-            .expect("at flags assignment in Circle parsing")
-            .parse::<Type>()
-            .expect("at Type parsing in flags assignment in Circle parsing");
-        let hit_sound = line
-            .next()
-            .expect("at hit_sound assignment in Circle parsing")
-            .parse::<HitSound>()
-            .expect("at HitSound parsing in hit_sound assignment in Circle parsing");
-        Ok(Circle {
-            x,
-            y,
-            time,
-            flags,
-            hit_sound,
-            hit_sample,
-        })
-    }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum CurveType {
-    Bezier,
-    Centripetal,
-    Linear,
-    Perfect,
+pub enum SampleSet {
+    Default,
+    Normal,
+    Soft,
+    Drum,
 }
-impl FromStr for CurveType {
+impl FromStr for SampleSet {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "B" => Ok(Self::Bezier),
-            "C" => Ok(Self::Centripetal),
-            "L" => Ok(Self::Linear),
-            "P" => Ok(Self::Perfect),
-            _ => panic!("Invalid CurveType: {}", s),
+            "0" | "Default" => Ok(SampleSet::Default),
+            "1" | "Normal" => Ok(SampleSet::Normal),
+            "2" | "Soft" => Ok(SampleSet::Soft),
+            "3" | "Drum" => Ok(SampleSet::Drum),
+            _ => panic!("Invalid str during SampleSet parsing: {}", s),
         }
     }
 }
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Point {
-    x: i32,
-    y: i32,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Curve {
     _type: CurveType,
@@ -1193,10 +1368,13 @@ impl FromStr for Curve {
             .parse::<CurveType>()
             .expect("at CurveType parsing in _type assignment in Curve parsing");
         let mut points = Vec::new();
-        let mut linear_stop = false;
+        let mut count = 0;
         for pair in line {
-            if linear_stop {
-                panic!("Invalid Curve: Linear curve {} has more than 1 points", s)
+            match (_type, count) {
+                (CurveType::Perfect, 2) => {
+                    panic!("Invalid Curve: Perfect curve {} has more than 2 points", s)
+                }
+                _ => count += 1,
             }
             let mut pair = pair.split(':');
             points.push(Point {
@@ -1217,234 +1395,38 @@ impl FromStr for Curve {
                         err, s
                     )),
             });
-            if _type == CurveType::Linear {
-                linear_stop = true;
-            }
         }
         Ok(Self { _type, points })
     }
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Slider {
-    x: i32,
-    y: i32,
-    time: i32,
-    flags: Type,
-    hit_sound: HitSound,
-    curve: Curve,
-    slides: i32,
-    length: f32,
-    edge_sounds: Vec<HitSound>,
-    edge_sets: Vec<HalfHitSample>,
-    hit_sample: HitSample,
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum CurveType {
+    Bezier,
+    Centripetal,
+    Linear,
+    Perfect,
 }
-impl FromStr for Slider {
+impl FromStr for CurveType {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut line = s.split(',');
-        let hit_sample = HitSample {
-            ..Default::default()
-        };
-        let x = line
-            .next()
-            .expect("in x assignment in Slider parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in x assignment in Slider parsing");
-        let y = line
-            .next()
-            .expect("in y assignment in Slider parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in y assignment in Slider parsing");
-        let time = line
-            .next()
-            .expect("in time assignment in Slider parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in time assignment in Slider parsing");
-        let flags = line
-            .next()
-            .expect("in flags assignment in Slider parsing")
-            .parse::<Type>()
-            .expect("in Type parsing in flags assignment in Slider parsing");
-        let hit_sound = line
-            .next()
-            .expect("in hit_sound assignment in Slider parsing")
-            .parse::<HitSound>()
-            .expect("in HitSound parsing in hit_sound assignment in Slider parsing");
-        let collected = line.collect::<Vec<&str>>();
-        let commas = collected.len();
-        let mut line = collected.into_iter();
-        let curve = match commas {
-            3 | 6 => line
-                .next()
-                .expect("in curve assignment in Slider parsing")
-                .parse::<Curve>()
-                .expect("in Curve parsing in curve assignment in Slider parsing"),
-            _ => panic!(
-                "Invalid slider: wrong remaining line size: {} in line: {} at curve assignment",
-                commas, s
-            ),
-        };
-        let slides = match commas {
-            3 | 6 => line
-                .next()
-                .expect("in slides assignment in Slider parsing")
-                .parse::<i32>()
-                .expect("in i32 parsing in slides assignment in Slider parsing"),
-            _ => panic!(
-                "Invalid slider: wrong remaining line size: {} in line: {} at slides assignment",
-                commas, s
-            ),
-        };
-        let length = match commas {
-            3 | 6 => line
-                .next()
-                .expect("in length assignment in Slider parsing")
-                .parse::<f32>()
-                .expect("in f32 parsing in length assignment in Slider parsing"),
-            _ => panic!(
-                "Invalid slider: wrong remaining line size: {} in line: {} at length assignment",
-                commas, s
-            ),
-        };
-        let edge_sounds = match commas {
-            6 => {
-                let mut sounds = Vec::new();
-                for sound in line
-                    .next()
-                    .expect("in sound assignment in edge_sounds assignment in Slider parsing")
-                    .split('|')
-                {
-                    sounds.push(
-                        sound
-                            .parse::<HitSound>()
-                            .expect("in sounds pushing with HitSound parsing in edge_sounds assignment in Slider parsing"),
-                    );
-                }
-                sounds
-            }
-            _ => vec![
-                "0".parse::<HitSound>().expect(
-                    "at edge_sounds assignment with HitSound parsing of \"0\" in Slider parsing",
-                ),
-                "2".parse::<HitSound>().expect(
-                    "at edge_sounds assignment with HitSound parsing of \"2\" in Slider parsing",
-                ),
-            ],
-        };
-        let edge_sets = match commas {
-            6 => {
-                let mut sounds = Vec::new();
-                for sound in line
-                    .next()
-                    .expect("in sound assignment in edge_sets assignment in Slider parsing")
-                    .split('|')
-                {
-                    sounds.push(
-                        sound
-                            .parse::<HalfHitSample>()
-                            .expect("in sounds pushing with HalfHitSample parsing in edge_sets assignment in Slider parsing"),
-                    );
-                }
-                sounds
-            }
-            _ => vec![
-                "0:0".parse::<HalfHitSample>().expect(
-                    "at edge_sets assignment with HalfHitSample parsing of \"0:0\" in Slider parsing",
-                ),
-                "0:0".parse::<HalfHitSample>().expect(
-                    "at edge_sets assignment with HalfHitSample parsing of \"0:0\" in Slider parsing",
-                ),
-            ],
-        };
-        Ok(Slider {
-            x,
-            y,
-            time,
-            flags,
-            hit_sound,
-            curve,
-            slides,
-            length,
-            edge_sounds,
-            edge_sets,
-            hit_sample,
-        })
+        match s {
+            "B" => Ok(Self::Bezier),
+            "C" => Ok(Self::Centripetal),
+            "L" => Ok(Self::Linear),
+            "P" => Ok(Self::Perfect),
+            _ => panic!("Invalid CurveType: {}", s),
+        }
     }
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Spinner {
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Point {
     x: i32,
     y: i32,
-    time: i32,
-    flags: Type,
-    hit_sound: HitSound,
-    end_time: i32,
-    hit_sample: HitSample,
-}
-impl FromStr for Spinner {
-    type Err = Box<dyn std::error::Error>;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut line = s.split(',');
-        let hit_sample = HitSample {
-            ..Default::default()
-        };
-        let x = line
-            .next()
-            .expect("in x assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in x assignment in Spinner parsing");
-        let y = line
-            .next()
-            .expect("in y assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in y assignment in Spinner parsing");
-        let time = line
-            .next()
-            .expect("in time assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in time assignment in Spinner parsing");
-        let flags = line
-            .next()
-            .expect("in flags assignment in Spinner parsing")
-            .parse::<Type>()
-            .expect("in Type parsing in flags assignment in Spinner parsing");
-        let hit_sound = line
-            .next()
-            .expect("in hit_sound assignment in Spinner parsing")
-            .parse::<HitSound>()
-            .expect("in HitSound parsing in hit_sound assignment in Spinner parsing");
-        let end_time = line
-            .next()
-            .expect("in end_time assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in end_time assignment in Spinner parsing");
-        Ok(Spinner {
-            x,
-            y,
-            time,
-            flags,
-            hit_sound,
-            end_time,
-            hit_sample,
-        })
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn catch_unwind_silent<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
-        f: F,
-    ) -> std::thread::Result<R> {
-        let prev_hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(|_| {}));
-        let result = std::panic::catch_unwind(f);
-        std::panic::set_hook(prev_hook);
-        result
-    }
 
     #[test]
     fn slider_parse() {
@@ -1502,20 +1484,366 @@ mod tests {
                     ..Default::default()
                 },
             },
-        )
+        );
         // Perfect slider from ver 14.
+        assert_eq!(
+            "342,250,2279,2,0,P|282:209|239:210,1,105.493329791992,2|0,0:2|0:2,0:0:0:0:"
+                .parse::<Slider>()
+                .unwrap(),
+            Slider {
+                x: 342,
+                y: 250,
+                time: 2279,
+                flags: Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: false,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false
+                },
+                curve: Curve {
+                    _type: CurveType::Perfect,
+                    points: vec![Point { x: 282, y: 209 }, Point { x: 239, y: 210 }],
+                },
+                slides: 1,
+                length: 105.493329791992,
+                edge_sounds: vec![
+                    HitSound {
+                        normal: false,
+                        whistle: true,
+                        finish: false,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                ],
+                edge_sets: vec![
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Soft
+                    },
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Soft
+                    },
+                ],
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
         // Bezier slider from ver 14.
+        assert_eq!(
+            "183,255,4985,2,0,B|170:100|234:201|200:26,1,210.986659583985,2|0,0:2|3:2,0:0:0:0:"
+                .parse::<Slider>()
+                .unwrap(),
+            Slider {
+                x: 183,
+                y: 255,
+                time: 4985,
+                flags: Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: false,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false
+                },
+                curve: Curve {
+                    _type: CurveType::Bezier,
+                    points: vec![
+                        Point { x: 170, y: 100 },
+                        Point { x: 234, y: 201 },
+                        Point { x: 200, y: 26 }
+                    ],
+                },
+                slides: 1,
+                length: 210.986659583985,
+                edge_sounds: vec![
+                    HitSound {
+                        normal: false,
+                        whistle: true,
+                        finish: false,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                ],
+                edge_sets: vec![
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Soft
+                    },
+                    HalfHitSample {
+                        normal_set: SampleSet::Drum,
+                        addition_set: SampleSet::Soft
+                    },
+                ],
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
         // Linear slider from ver 3.
-        // Perfect slider from ver 3.
+        assert_eq!(
+            "160,320,79368,2,4,L|160:320|160:240,1,70"
+                .parse::<Slider>()
+                .unwrap(),
+            Slider {
+                x: 160,
+                y: 320,
+                time: 79368,
+                flags: Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: false,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: true,
+                    clap: false
+                },
+                curve: Curve {
+                    _type: CurveType::Linear,
+                    points: vec![Point { x: 160, y: 320 }, Point { x: 160, y: 240 }],
+                },
+                slides: 1,
+                length: 70.0,
+                edge_sounds: vec![
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: true,
+                        finish: false,
+                        clap: false
+                    },
+                ],
+                edge_sets: vec![
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Default
+                    },
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Default
+                    },
+                ],
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
+        // Perfect slider from ver 3. Doesn't exist??
         // Bezier slider from ver 3.
-        // Centripetal slider.
+        assert_eq!(
+            "192,256,64118,2,4,B|192:256|288:256,3,70"
+                .parse::<Slider>()
+                .unwrap(),
+            Slider {
+                x: 192,
+                y: 256,
+                time: 64118,
+                flags: Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: false,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: true,
+                    clap: false
+                },
+                curve: Curve {
+                    _type: CurveType::Bezier,
+                    points: vec![Point { x: 192, y: 256 }, Point { x: 288, y: 256 }],
+                },
+                slides: 3,
+                length: 70.0,
+                edge_sounds: vec![
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: true,
+                        finish: false,
+                        clap: false
+                    },
+                ],
+                edge_sets: vec![
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Default
+                    },
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Default
+                    },
+                ],
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
+        // Centripetal slider from ver 7.
+        assert_eq!(
+            "160,64,139347,6,0,C|244:69|352:64,2,160,4|0|0"
+                .parse::<Slider>()
+                .unwrap(),
+            Slider {
+                x: 160,
+                y: 64,
+                time: 139347,
+                flags: Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false
+                },
+                curve: Curve {
+                    _type: CurveType::Centripetal,
+                    points: vec![Point { x: 244, y: 69 }, Point { x: 352, y: 64 }],
+                },
+                slides: 2,
+                length: 160.0,
+                edge_sounds: vec![
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: true,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                ],
+                edge_sets: vec![
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Default
+                    },
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Default
+                    },
+                ],
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
         // Circle from ver 14.
+        assert!(catch_unwind_silent(|| "102,240,161,5,2,0:0:0:0:".parse::<Slider>()).is_err());
         // Circle from ver 3.
+        assert!(catch_unwind_silent(|| "96,64,8118,5,4,".parse::<Slider>()).is_err());
         // Spinner from ver 14.
+        assert!(
+            catch_unwind_silent(|| "256,192,29544,12,0,32632,0:2:0:0:".parse::<Slider>()).is_err()
+        );
         // Spinner from ver 3.
+        assert!(catch_unwind_silent(|| "256,192,141619,12,0,143869".parse::<Slider>()).is_err());
         // Ensure that trim is not used during parsing.
+        assert!(catch_unwind_silent(|| {
+            " 137,72,2985,6,0,L|253:60,1,105.493329791992,2|0,0:2|0:2,0:0:0:0:".parse::<Slider>()
+        })
+        .is_err());
+        // Trim actually needs to be used in the HitSample parsing so a space on the end must be OK.
+        assert_eq!(
+            "137,72,2985,6,0,L|253:60,1,105.493329791992,2|0,0:2|0:2,0:0:0:0: "
+                .parse::<Slider>()
+                .unwrap(),
+            Slider {
+                x: 137,
+                y: 72,
+                time: 2985,
+                flags: Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+                hit_sound: HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false
+                },
+                curve: Curve {
+                    _type: CurveType::Linear,
+                    points: vec![Point { x: 253, y: 60 }],
+                },
+                slides: 1,
+                length: 105.493329791992,
+                edge_sounds: vec![
+                    HitSound {
+                        normal: false,
+                        whistle: true,
+                        finish: false,
+                        clap: false
+                    },
+                    HitSound {
+                        normal: false,
+                        whistle: false,
+                        finish: false,
+                        clap: false
+                    },
+                ],
+                edge_sets: vec![
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Soft
+                    },
+                    HalfHitSample {
+                        normal_set: SampleSet::Default,
+                        addition_set: SampleSet::Soft
+                    },
+                ],
+                hit_sample: HitSample {
+                    ..Default::default()
+                },
+            },
+        );
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<Slider>()).is_err());
     }
-
     #[test]
     fn spinner_parse() {
         // Spinner from ver 14.
@@ -1582,47 +1910,411 @@ mod tests {
             catch_unwind_silent(|| "336,96,81368,2,4,L|336:96|336:0,1,70".parse::<Spinner>())
                 .is_err()
         );
-        // Ensure that there is no trim during parsing.
+        // Ensure that there is no trim
         assert!(catch_unwind_silent(|| " 256,192,141619,12,0,143869".parse::<Spinner>()).is_err());
         assert!(catch_unwind_silent(|| "256,192,141619,12,0,143869 ".parse::<Spinner>()).is_err());
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<Spinner>()).is_err());
     }
-
     #[test]
-    fn curvetype_parse() {
+    fn type_parse() {
         let correct = [
-            ("B", CurveType::Bezier),
-            ("C", CurveType::Centripetal),
-            ("L", CurveType::Linear),
-            ("P", CurveType::Perfect),
+            (
+                "1",
+                Type {
+                    object_type: ObjectType::Circle,
+                    new_combo: false,
+                    color_skip: 0,
+                },
+            ),
+            (
+                "2",
+                Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: false,
+                    color_skip: 0,
+                },
+            ),
+            (
+                "5",
+                Type {
+                    object_type: ObjectType::Circle,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+            ),
+            (
+                "6",
+                Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+            ),
+            (
+                "8",
+                Type {
+                    object_type: ObjectType::Spinner,
+                    new_combo: false,
+                    color_skip: 0,
+                },
+            ),
+            (
+                "12",
+                Type {
+                    object_type: ObjectType::Spinner,
+                    new_combo: true,
+                    color_skip: 0,
+                },
+            ),
+            (
+                "66",
+                Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: false,
+                    color_skip: 1,
+                },
+            ),
+            (
+                "33",
+                Type {
+                    object_type: ObjectType::Circle,
+                    new_combo: false,
+                    color_skip: 2,
+                },
+            ),
+            (
+                "104",
+                Type {
+                    object_type: ObjectType::Spinner,
+                    new_combo: false,
+                    color_skip: 3,
+                },
+            ),
+            (
+                "17",
+                Type {
+                    object_type: ObjectType::Circle,
+                    new_combo: false,
+                    color_skip: 4,
+                },
+            ),
+            (
+                "86",
+                Type {
+                    object_type: ObjectType::Slider,
+                    new_combo: true,
+                    color_skip: 5,
+                },
+            ),
+            (
+                "53",
+                Type {
+                    object_type: ObjectType::Circle,
+                    new_combo: true,
+                    color_skip: 6,
+                },
+            ),
+            (
+                "124",
+                Type {
+                    object_type: ObjectType::Spinner,
+                    new_combo: true,
+                    color_skip: 7,
+                },
+            ),
         ];
-        // Test correct inputs.
         for pair in correct {
-            assert_eq!(pair.0.parse::<CurveType>().unwrap(), pair.1);
+            assert_eq!(pair.0.parse::<Type>().unwrap(), pair.1);
         }
-        // Ensure that there is no trim during parsing.
-        let no_trim = [" B", " C", " L", " P", "B ", "C ", "L ", "P "];
-        for line in no_trim {
-            assert!(catch_unwind_silent(|| line.parse::<CurveType>()).is_err());
-        }
+        // Ensure no trim.
+        assert!(catch_unwind_silent(|| " 1".parse::<Type>()).is_err());
+        assert!(catch_unwind_silent(|| "1 ".parse::<Type>()).is_err());
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<Type>()).is_err());
     }
-
     #[test]
-    fn curve_parse_perfect() {
-        // TODO: Determine if there are rules for validating perfect curves
-        // (and whether they are followed in real maps).
+    fn hit_sound_parse() {
+        let correct = [
+            (
+                "0",
+                HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: false,
+                },
+            ),
+            (
+                "1",
+                HitSound {
+                    normal: true,
+                    whistle: false,
+                    finish: false,
+                    clap: false,
+                },
+            ),
+            (
+                "2",
+                HitSound {
+                    normal: false,
+                    whistle: true,
+                    finish: false,
+                    clap: false,
+                },
+            ),
+            (
+                "3",
+                HitSound {
+                    normal: true,
+                    whistle: true,
+                    finish: false,
+                    clap: false,
+                },
+            ),
+            (
+                "4",
+                HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: true,
+                    clap: false,
+                },
+            ),
+            (
+                "5",
+                HitSound {
+                    normal: true,
+                    whistle: false,
+                    finish: true,
+                    clap: false,
+                },
+            ),
+            (
+                "6",
+                HitSound {
+                    normal: false,
+                    whistle: true,
+                    finish: true,
+                    clap: false,
+                },
+            ),
+            (
+                "7",
+                HitSound {
+                    normal: true,
+                    whistle: true,
+                    finish: true,
+                    clap: false,
+                },
+            ),
+            (
+                "8",
+                HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: false,
+                    clap: true,
+                },
+            ),
+            (
+                "9",
+                HitSound {
+                    normal: true,
+                    whistle: false,
+                    finish: false,
+                    clap: true,
+                },
+            ),
+            (
+                "10",
+                HitSound {
+                    normal: false,
+                    whistle: true,
+                    finish: false,
+                    clap: true,
+                },
+            ),
+            (
+                "11",
+                HitSound {
+                    normal: true,
+                    whistle: true,
+                    finish: false,
+                    clap: true,
+                },
+            ),
+            (
+                "12",
+                HitSound {
+                    normal: false,
+                    whistle: false,
+                    finish: true,
+                    clap: true,
+                },
+            ),
+            (
+                "13",
+                HitSound {
+                    normal: true,
+                    whistle: false,
+                    finish: true,
+                    clap: true,
+                },
+            ),
+            (
+                "14",
+                HitSound {
+                    normal: false,
+                    whistle: true,
+                    finish: true,
+                    clap: true,
+                },
+            ),
+            (
+                "15",
+                HitSound {
+                    normal: true,
+                    whistle: true,
+                    finish: true,
+                    clap: true,
+                },
+            ),
+        ];
+        for pair in correct {
+            assert_eq!(pair.0.parse::<HitSound>().unwrap(), pair.1);
+        }
+        // Ensure that trim is not used.
+        let no_trim = [
+            " 0", " 1", " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 11", " 12", " 13",
+            " 14", " 15", "0 ", "1 ", "2 ", "3 ", "4 ", "5 ", "6 ", "7 ", "8 ", "9 ", "10 ", "11 ",
+            "12 ", "13 ", "14 ", "15 ",
+        ];
+        for line in no_trim {
+            assert!(catch_unwind_silent(|| line.parse::<HitSound>()).is_err());
+        }
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<HitSound>()).is_err());
+    }
+    #[test]
+    fn half_hit_sample_parse() {
         assert_eq!(
-            "P|282:209|239:210".parse::<Curve>().unwrap(),
-            Curve {
-                _type: CurveType::Perfect,
-                points: vec![Point { x: 282, y: 209 }, Point { x: 239, y: 210 },]
+            "0:0".parse::<HalfHitSample>().unwrap(),
+            HalfHitSample {
+                ..Default::default()
+            }
+        );
+        assert_eq!(
+            "0:1".parse::<HalfHitSample>().unwrap(),
+            HalfHitSample {
+                normal_set: SampleSet::Default,
+                addition_set: SampleSet::Normal,
+            }
+        );
+        assert_eq!(
+            "2:3".parse::<HalfHitSample>().unwrap(),
+            HalfHitSample {
+                normal_set: SampleSet::Soft,
+                addition_set: SampleSet::Drum,
+            }
+        );
+        // Ensure trim is not used.
+        assert!(catch_unwind_silent(|| " 0:0".parse::<HalfHitSample>()).is_err());
+        assert!(catch_unwind_silent(|| "0:0 ".parse::<HalfHitSample>()).is_err());
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<HalfHitSample>()).is_err());
+    }
+    #[test]
+    fn hit_sample_parse() {
+        // Test default case is equal to 0:0:0:0:
+        assert_eq!(
+            "0:0:0:0:".parse::<HitSample>().unwrap(),
+            HitSample {
+                ..Default::default()
             },
         );
-        assert!(catch_unwind_silent(|| " P|282:209|239:210".parse::<Curve>()).is_err());
-        assert!(catch_unwind_silent(|| "P|282:209|239:210 ".parse::<Curve>()).is_err());
+        // Test without filename.
+        assert_eq!(
+            "1:2:3:100:".parse::<HitSample>().unwrap(),
+            HitSample {
+                normal_set: "1".parse::<SampleSet>().unwrap(),
+                addition_set: "2".parse::<SampleSet>().unwrap(),
+                index: 3,
+                volume: 100,
+                ..Default::default()
+            },
+        );
+        // Test with filename.
+        assert_eq!(
+            "0:3:2:100:file".parse::<HitSample>().unwrap(),
+            HitSample {
+                normal_set: "0".parse::<SampleSet>().unwrap(),
+                addition_set: "3".parse::<SampleSet>().unwrap(),
+                index: 2,
+                volume: 100,
+                filename: Some("file".into()),
+            },
+        );
+        // Test with filename with three spaces.
+        assert_eq!(
+            "0:3:2:100: a file ".parse::<HitSample>().unwrap(),
+            HitSample {
+                normal_set: "0".parse::<SampleSet>().unwrap(),
+                addition_set: "3".parse::<SampleSet>().unwrap(),
+                index: 2,
+                volume: 100,
+                filename: Some(" a file ".into()),
+            },
+        );
+        // Ensure that trim isn't used on the entire string.
+        assert!(catch_unwind_silent(|| " 0:0:0:0:".parse::<SampleSet>()).is_err());
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<SampleSet>()).is_err());
     }
-
     #[test]
-    fn curve_parse_centripetal() {
+    fn sample_set_parse() {
+        // Test all correct inputs
+        let correct = [
+            ("0", SampleSet::Default),
+            ("1", SampleSet::Normal),
+            ("2", SampleSet::Soft),
+            ("3", SampleSet::Drum),
+        ];
+        for pair in correct {
+            assert_eq!(pair.0.parse::<SampleSet>().unwrap(), pair.1);
+        }
+        // Ensure that trim is not used
+        let no_trim = [" 0", " 1", " 2", " 3", "0 ", "1 ", "2 ", "3 "];
+        for line in no_trim {
+            assert!(catch_unwind_silent(|| line.parse::<SampleSet>()).is_err());
+        }
+        // Ensure panic on empty input
+        assert!(catch_unwind_silent(|| "".parse::<SampleSet>()).is_err());
+    }
+    #[test]
+    fn curve_parse() {
+        // Test bezier curve.
+        assert_eq!(
+            "B|170:100|234:201|200:26".parse::<Curve>().unwrap(),
+            Curve {
+                _type: CurveType::Bezier,
+                points: vec![
+                    Point { x: 170, y: 100 },
+                    Point { x: 234, y: 201 },
+                    Point { x: 200, y: 26 },
+                ]
+            },
+        );
+        // Test linear curve.
+        // Linear has simple rules so I supply a fake curve point.
+        assert_eq!(
+            "L|0:0".parse::<Curve>().unwrap(),
+            Curve {
+                _type: CurveType::Linear,
+                points: vec![Point { x: 0, y: 0 },]
+            },
+        );
+        // Test centripetal curve.
         // TODO: Determine if there are rules for validating centripetal curves
         // (and whether they are followed in real maps).
         assert_eq!(
@@ -1636,42 +2328,50 @@ mod tests {
                 ]
             },
         );
-        assert!(catch_unwind_silent(|| " C|240:288|352:240|464:224".parse::<Curve>()).is_err());
-        assert!(catch_unwind_silent(|| "C|240:288|352:240|464:224 ".parse::<Curve>()).is_err());
-    }
-
-    #[test]
-    fn curve_parse_bezier() {
+        // Test perfect curve.
+        // TODO: Determine if there are rules for validating perfect curves
+        // (and whether they are followed in real maps).
         assert_eq!(
-            "B|170:100|234:201|200:26".parse::<Curve>().unwrap(),
+            "P|282:209|239:210".parse::<Curve>().unwrap(),
             Curve {
-                _type: CurveType::Bezier,
-                points: vec![
-                    Point { x: 170, y: 100 },
-                    Point { x: 234, y: 201 },
-                    Point { x: 200, y: 26 },
-                ]
+                _type: CurveType::Perfect,
+                points: vec![Point { x: 282, y: 209 }, Point { x: 239, y: 210 },]
             },
         );
-        assert!(catch_unwind_silent(|| " B|170:100|234:201|200:26".parse::<Curve>()).is_err());
-        assert!(catch_unwind_silent(|| "B|170:100|234:201|200:26 ".parse::<Curve>()).is_err());
-    }
-
-    #[test]
-    fn curve_parse_linear() {
-        // Linear has simple rules so I supply a fake curve point.
-        assert_eq!(
-            "L|0:0".parse::<Curve>().unwrap(),
-            Curve {
-                _type: CurveType::Linear,
-                points: vec![Point { x: 0, y: 0 },]
-            },
-        );
-        // Trim should be used in the top level only.
+        // Ensure that trim is not used.
         assert!(catch_unwind_silent(|| " L|0:0".parse::<Curve>()).is_err());
         assert!(catch_unwind_silent(|| "L|0:0 ".parse::<Curve>()).is_err());
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<Curve>()).is_err());
+    }
+    #[test]
+    fn curve_type_parse() {
+        // Test correct inputs.
+        let correct = [
+            ("B", CurveType::Bezier),
+            ("C", CurveType::Centripetal),
+            ("L", CurveType::Linear),
+            ("P", CurveType::Perfect),
+        ];
+        for pair in correct {
+            assert_eq!(pair.0.parse::<CurveType>().unwrap(), pair.1);
+        }
+        // Ensure that there is no trim during parsing.
+        let no_trim = [" B", " C", " L", " P", "B ", "C ", "L ", "P "];
+        for line in no_trim {
+            assert!(catch_unwind_silent(|| line.parse::<CurveType>()).is_err());
+        }
+        // Ensure panic on empty input.
+        assert!(catch_unwind_silent(|| "".parse::<CurveType>()).is_err());
+    }
 
-        // Linear curves should never have more than 1 point.
-        assert!(catch_unwind_silent(|| "L|0:0|1:1".parse::<Curve>()).is_err());
+    fn catch_unwind_silent<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
+        f: F,
+    ) -> std::thread::Result<R> {
+        let prev_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let result = std::panic::catch_unwind(f);
+        std::panic::set_hook(prev_hook);
+        result
     }
 }
