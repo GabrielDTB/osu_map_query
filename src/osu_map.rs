@@ -2,7 +2,19 @@
 // Play area: 510x385 osu px
 // Center of playfield: 256x192 osu px
 
+extern crate num;
+
+use num::rational::Ratio;
 use std::{error::Error, str::FromStr};
+
+macro_rules! ratio {
+    ($numer:expr) => {
+        num::rational::Ratio::from_integer($numer)
+    };
+    ($numer:expr, $denom:expr) => {
+        num::rational::Ratio::new($numer, $denom)
+    };
+}
 
 /// Parse a .osu file and return a MapData object
 pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
@@ -42,7 +54,7 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
         .last()
         .expect("at map.file_format assignment (2 deep)")
         .trim()
-        .parse::<i32>()
+        .parse::<i64>()
         .expect("at map.file_format assignment (3 deep)");
     for line in tabular {
         if line.starts_with("[") || line.trim().is_empty() {
@@ -56,13 +68,13 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
             "AudioFilename" => map.audio_filename = Some(value.to_string()),
             "AudioLeadIn" => {
                 map.audio_lead_in = value
-                    .parse::<i32>()
+                    .parse::<i64>()
                     .expect("at map.audio_lead_in assignment in tabular")
             }
             "AudioHash" => map.audio_hash = Some(value.to_string()),
             "PreviewTime" => {
                 map.preview_time = value
-                    .parse::<i32>()
+                    .parse::<i64>()
                     .expect("at map.preview_time assignment in tabular")
             }
             "Countdown" => {
@@ -76,9 +88,8 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                     .expect("at map.sample_set assignment in tabular")
             }
             "StackLeniency" => {
-                map.stack_leniency = value
-                    .parse::<f32>()
-                    .expect("at map.stack_leniency assignment in tabular")
+                map.stack_leniency =
+                    decimal_to_ratio(value).expect("at map.stack_leniency assignment in tabular")
             }
             "Mode" => {
                 map.mode = value
@@ -143,7 +154,7 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
             }
             "CountdownOffset" => {
                 map.countdown_offset = value
-                    .parse::<i32>()
+                    .parse::<i64>()
                     .expect("at map.countdown_offset assignment in tabular")
             }
             "SpecialStyle" => {
@@ -176,36 +187,32 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
             "Bookmarks" => {
                 let mut bookmarks = Vec::new();
                 for i in value.split(',') {
-                    bookmarks.push(i.parse::<i32>().expect("at bookmarks pushing in tabular"));
+                    bookmarks.push(i.parse::<i64>().expect("at bookmarks pushing in tabular"));
                 }
                 map.bookmarks = Some(bookmarks);
             }
             "DistanceSpacing" => {
                 map.distance_spacing = Some(
-                    value
-                        .parse::<f32>()
-                        .expect("at map.distance_spacing assignment in tabular"),
+                    decimal_to_ratio(value).expect("at map.distance_spacing assignment in tabular"),
                 )
             }
             "BeatDivisor" => {
                 map.beat_divisor = Some(
                     value
-                        .parse::<i32>()
+                        .parse::<i64>()
                         .expect("at map.beat_divisor assignment in tabular"),
                 )
             }
             "GridSize" => {
                 map.grid_size = Some(
                     value
-                        .parse::<i32>()
+                        .parse::<i64>()
                         .expect("at map.grid_size assignment in tabular"),
                 )
             }
             "TimelineZoom" => {
                 map.timeline_zoom = Some(
-                    value
-                        .parse::<f32>()
-                        .expect("at map.timeline_zoom assignment in tabular"),
+                    decimal_to_ratio(value).expect("at map.timeline_zoom assignment in tabular"),
                 )
             }
             "Title" => map.title = Some(value.to_string()),
@@ -228,57 +235,46 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
             "BeatmapID" => {
                 map.beatmap_id = Some(
                     value
-                        .parse::<i32>()
+                        .parse::<i64>()
                         .expect("at map.beatmap_id assignment in tabular"),
                 )
             }
             "BeatmapSetID" => {
                 map.beatmap_set_id = Some(
                     value
-                        .parse::<i32>()
+                        .parse::<i64>()
                         .expect("at map.beatmap_set_id assignment in tabular"),
                 )
             }
             "HPDrainRate" => {
                 map.hpdrain_rate = Some(
-                    value
-                        .parse::<f32>()
-                        .expect("at map.hpdrain_rate assignment in tabular"),
+                    decimal_to_ratio(value).expect("at map.hpdrain_rate assignment in tabular"),
                 )
             }
             "CircleSize" => {
-                map.circle_size = Some(
-                    value
-                        .parse::<f32>()
-                        .expect("at map.circle_size assignment in tabular"),
-                )
+                map.circle_size =
+                    Some(decimal_to_ratio(value).expect("at map.circle_size assignment in tabular"))
             }
             "OverallDifficulty" => {
                 map.overall_difficulty = Some(
-                    value
-                        .parse::<f32>()
+                    decimal_to_ratio(value)
                         .expect("at map.overall_difficulty assignment in tabular"),
                 )
             }
             "ApproachRate" => {
                 map.approach_rate = Some(
-                    value
-                        .parse::<f32>()
-                        .expect("at map.approach_rate assignment in tabular"),
+                    decimal_to_ratio(value).expect("at map.approach_rate assignment in tabular"),
                 )
             }
             "SliderMultiplier" => {
                 map.slider_multiplier = Some(
-                    value
-                        .parse::<f32>()
+                    decimal_to_ratio(value)
                         .expect("at map.slider_multiplier assignment in tabular"),
                 )
             }
             "SliderTickRate" => {
                 map.slider_tick_rate = Some(
-                    value
-                        .parse::<f32>()
-                        .expect("at map.slider_tick_rate assignment in tabular"),
+                    decimal_to_ratio(value).expect("at map.slider_tick_rate assignment in tabular"),
                 )
             }
             _ => panic!("Unknown key: {}", key),
@@ -402,6 +398,8 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
             }
         }
     }
+    // Verify hit objects
+
     Ok(map)
 }
 
@@ -409,15 +407,15 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
 /// Arranged like map ver 14.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MapData {
-    pub file_format: i32,
+    pub file_format: i64,
     //[General]
     pub audio_filename: Option<String>,
-    pub audio_lead_in: i32,
+    pub audio_lead_in: i64,
     pub audio_hash: Option<String>, // Deprecated
-    pub preview_time: i32,
+    pub preview_time: i64,
     pub countdown: Countdown,
     pub sample_set: SampleSet,
-    pub stack_leniency: f32,
+    pub stack_leniency: Ratio<i64>,
     pub mode: Mode,
     pub letterbox_in_breaks: bool,
     pub story_fire_in_front: bool, // Deprecated
@@ -426,17 +424,17 @@ pub struct MapData {
     pub overlay_position: OverlayPosition,
     pub skin_preference: Option<String>,
     pub epilepsy_warning: bool,
-    pub countdown_offset: i32,
+    pub countdown_offset: i64,
     pub special_style: bool,
     pub widescreen_storyboard: bool,
     pub samples_match_playback_rate: bool,
 
     //[Editor]
-    pub bookmarks: Option<Vec<i32>>,
-    pub distance_spacing: Option<f32>,
-    pub beat_divisor: Option<i32>,
-    pub grid_size: Option<i32>,
-    pub timeline_zoom: Option<f32>,
+    pub bookmarks: Option<Vec<i64>>,
+    pub distance_spacing: Option<Ratio<i64>>,
+    pub beat_divisor: Option<i64>,
+    pub grid_size: Option<i64>,
+    pub timeline_zoom: Option<Ratio<i64>>,
 
     //[Metadata]
     pub title: Option<String>,
@@ -447,16 +445,16 @@ pub struct MapData {
     pub version: Option<String>,
     pub source: Option<String>,
     pub tags: Option<Vec<String>>,
-    pub beatmap_id: Option<i32>,
-    pub beatmap_set_id: Option<i32>,
+    pub beatmap_id: Option<i64>,
+    pub beatmap_set_id: Option<i64>,
 
     //[Difficulty]
-    pub hpdrain_rate: Option<f32>,
-    pub circle_size: Option<f32>,
-    pub overall_difficulty: Option<f32>,
-    pub approach_rate: Option<f32>,
-    pub slider_multiplier: Option<f32>,
-    pub slider_tick_rate: Option<f32>,
+    pub hpdrain_rate: Option<Ratio<i64>>,
+    pub circle_size: Option<Ratio<i64>>,
+    pub overall_difficulty: Option<Ratio<i64>>,
+    pub approach_rate: Option<Ratio<i64>>,
+    pub slider_multiplier: Option<Ratio<i64>>,
+    pub slider_tick_rate: Option<Ratio<i64>>,
 
     //[Events]
     // I will be omitting the story board events because they are complicated.
@@ -483,7 +481,7 @@ impl Default for MapData {
             preview_time: -1,
             countdown: Countdown::Normal,
             sample_set: SampleSet::Normal,
-            stack_leniency: 0.7,
+            stack_leniency: ratio!(7, 10),
             mode: Mode::Osu,
             letterbox_in_breaks: false,
             story_fire_in_front: true, // Deprecated
@@ -597,8 +595,8 @@ impl FromStr for OverlayPosition {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Background {
     filename: String,
-    xoffset: i32,
-    yoffset: i32,
+    xoffset: i64,
+    yoffset: i64,
 }
 impl FromStr for Background {
     type Err = ();
@@ -616,12 +614,12 @@ impl FromStr for Background {
         let x = line
             .next()
             .unwrap_or("0")
-            .parse::<i32>()
+            .parse::<i64>()
             .expect("at x assignment in Background parsing");
         let y = line
             .next()
             .unwrap_or("0")
-            .parse::<i32>()
+            .parse::<i64>()
             .expect("at y assignment in Background parsing");
         Ok(Self {
             filename: background,
@@ -632,8 +630,8 @@ impl FromStr for Background {
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Break {
-    start_time: i32,
-    end_time: i32,
+    start_time: i64,
+    end_time: i64,
 }
 impl FromStr for Break {
     type Err = ();
@@ -642,13 +640,13 @@ impl FromStr for Break {
         let start_time = line
             .next()
             .expect("at start_time assignment in Break parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing of start_time in Break parsing");
+            .parse::<i64>()
+            .expect("at i64 parsing of start_time in Break parsing");
         let end_time = line
             .next()
             .expect("at end_time assignment in Break parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing of end_time in Break parsing");
+            .parse::<i64>()
+            .expect("at i64 parsing of end_time in Break parsing");
         Ok(Self {
             start_time,
             end_time,
@@ -657,12 +655,12 @@ impl FromStr for Break {
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TimingPoint {
-    time: i32,
-    beat_length: f32,
-    meter: i32,
+    time: i64,
+    beat_length: f64,
+    meter: i64,
     sample_set: SampleSet,
-    sample_index: i32,
-    volume: i32,
+    sample_index: i64,
+    volume: i64,
     uninherited: bool,
     effects: Effects,
 }
@@ -692,13 +690,13 @@ impl FromStr for TimingPoint {
                 let time = line
                     .next()
                     .expect("at time assignment in TimingPoint parsing, 1 branch")
-                    .parse::<i32>()
-                    .expect("at i32 parsing of time in TimingPoint parsing, 1 branch");
+                    .parse::<i64>()
+                    .expect("at i64 parsing of time in TimingPoint parsing, 1 branch");
                 let beat_length = line
                     .next()
                     .expect("at beat_length assignment in TimingPoint parsing, 1 branch")
-                    .parse::<f32>()
-                    .expect("at f32 parsing of beat_length in TimingPoint parsing, 1 branch");
+                    .parse::<f64>()
+                    .expect("at f64 parsing of beat_length in TimingPoint parsing, 1 branch");
                 Ok(Self {
                     time,
                     beat_length,
@@ -710,18 +708,18 @@ impl FromStr for TimingPoint {
                 let time = line
                     .next()
                     .expect("at time assignment in TimingPoint parsing, 7 branch")
-                    .parse::<i32>()
-                    .expect("at i32 parsing of time in TimingPoint parsing, 7 branch");
+                    .parse::<i64>()
+                    .expect("at i64 parsing of time in TimingPoint parsing, 7 branch");
                 let beat_length = line
                     .next()
                     .expect("at beat_length assignment in TimingPoint parsing, 7 branch")
-                    .parse::<f32>()
-                    .expect("at f32 parsing of beat_length in TimingPoint parsing, 7 branch");
+                    .parse::<f64>()
+                    .expect("at f64 parsing of beat_length in TimingPoint parsing, 7 branch");
                 let meter = line
                     .next()
                     .expect("at meter assignment in TimingPoint parsing, 7 branch")
-                    .parse::<i32>()
-                    .expect("at i32 parsing of meter in TimingPoint parsing, 7 branch");
+                    .parse::<i64>()
+                    .expect("at i64 parsing of meter in TimingPoint parsing, 7 branch");
                 let sample_set = line
                     .next()
                     .expect("at sample_set assignment in TimingPoint parsing, 7 branch")
@@ -730,19 +728,19 @@ impl FromStr for TimingPoint {
                 let sample_index = line
                     .next()
                     .expect("at sample_index assignment in TimingPoint parsing, 7 branch")
-                    .parse::<i32>()
-                    .expect("at i32 parsing of sample_index in TimingPoint parsing, 7 branch");
+                    .parse::<i64>()
+                    .expect("at i64 parsing of sample_index in TimingPoint parsing, 7 branch");
                 //sample index
                 let volume = line
                     .next()
                     .expect("at volume assignment in TimingPoint parsing, 7 branch")
-                    .parse::<i32>()
-                    .expect("at i32 parsing of volume in TimingPoint parsing, 7 branch");
+                    .parse::<i64>()
+                    .expect("at i64 parsing of volume in TimingPoint parsing, 7 branch");
                 let uninherited = line
                     .next()
                     .expect("at uninherited assignment in TimingPoint parsing, 7 branch")
-                    .parse::<i32>()
-                    .expect("at i32 parsing of uninherited in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of uninherited in TimingPoint parsing, 7 branch")
                     == 1;
                 let effects = line
                     .next()
@@ -830,11 +828,20 @@ pub enum HitObject {
     Slider(Slider),
     Spinner(Spinner),
 }
+pub trait Position {
+    fn position(&self) -> Point;
+}
+pub trait Time {
+    fn time(&self) -> i64;
+}
+pub trait Distance {
+    fn distance(&self, other: &Self) -> f64;
+}
 #[derive(Debug, Clone, PartialEq)]
 pub struct Circle {
-    x: i32,
-    y: i32,
-    time: i32,
+    x: i64,
+    y: i64,
+    time: i64,
     flags: Type,
     hit_sound: HitSound,
     hit_sample: HitSample,
@@ -850,18 +857,18 @@ impl FromStr for Circle {
         let x = line
             .next()
             .expect("at x assignment in Circle parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing in x assignment in Circle parsing");
+            .parse::<i64>()
+            .expect("at i64 parsing in x assignment in Circle parsing");
         let y = line
             .next()
             .expect("at y assignment in Circle parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing in y assignment in Circle parsing");
+            .parse::<i64>()
+            .expect("at i64 parsing in y assignment in Circle parsing");
         let time = line
             .next()
             .expect("at time assignment in Circle parsing")
-            .parse::<i32>()
-            .expect("at i32 parsing in time assignment in Circle parsing");
+            .parse::<i64>()
+            .expect("at i64 parsing in time assignment in Circle parsing");
         let flags = line
             .next()
             .expect("at flags assignment in Circle parsing")
@@ -882,16 +889,36 @@ impl FromStr for Circle {
         })
     }
 }
+impl Position for Circle {
+    fn position(&self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+impl Time for Circle {
+    fn time(&self) -> i64 {
+        self.time
+    }
+}
+impl Distance for Circle {
+    fn distance(&self, other: &Self) -> f64 {
+        let delta_x = self.x - other.x;
+        let delta_y = self.y - other.y;
+        ((delta_x.pow(2) + delta_y.pow(2)) as f64).sqrt()
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 pub struct Slider {
-    x: i32,
-    y: i32,
-    time: i32,
+    x: i64,
+    y: i64,
+    time: i64,
     flags: Type,
     hit_sound: HitSound,
     curve: Curve,
-    slides: i32,
-    length: f32,
+    slides: i64,
+    length: f64,
     edge_sounds: Vec<HitSound>,
     edge_sets: Vec<HalfHitSample>,
     hit_sample: HitSample,
@@ -903,18 +930,18 @@ impl FromStr for Slider {
         let x = line
             .next()
             .expect("in x assignment in Slider parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in x assignment in Slider parsing");
+            .parse::<i64>()
+            .expect("in i64 parsing in x assignment in Slider parsing");
         let y = line
             .next()
             .expect("in y assignment in Slider parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in y assignment in Slider parsing");
+            .parse::<i64>()
+            .expect("in i64 parsing in y assignment in Slider parsing");
         let time = line
             .next()
             .expect("in time assignment in Slider parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in time assignment in Slider parsing");
+            .parse::<i64>()
+            .expect("in i64 parsing in time assignment in Slider parsing");
         let flags = line
             .next()
             .expect("in flags assignment in Slider parsing")
@@ -943,8 +970,8 @@ impl FromStr for Slider {
             3 | 4 | 6 => line
                 .next()
                 .expect("in slides assignment in Slider parsing")
-                .parse::<i32>()
-                .expect("in i32 parsing in slides assignment in Slider parsing"),
+                .parse::<i64>()
+                .expect("in i64 parsing in slides assignment in Slider parsing"),
             _ => panic!(
                 "Invalid slider: wrong remaining line size: {} in line: {} at slides assignment",
                 commas, s
@@ -954,8 +981,8 @@ impl FromStr for Slider {
             3 | 4 | 6 => line
                 .next()
                 .expect("in length assignment in Slider parsing")
-                .parse::<f32>()
-                .expect("in f32 parsing in length assignment in Slider parsing"),
+                .parse::<f64>()
+                .expect("in f64 parsing in length assignment in Slider parsing"),
             _ => panic!(
                 "Invalid slider: wrong remaining line size: {} in line: {} at length assignment",
                 commas, s
@@ -1036,14 +1063,27 @@ impl FromStr for Slider {
         })
     }
 }
+impl Position for Slider {
+    fn position(&self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+impl Time for Slider {
+    fn time(&self) -> i64 {
+        self.time
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 pub struct Spinner {
-    x: i32,
-    y: i32,
-    time: i32,
+    x: i64,
+    y: i64,
+    time: i64,
     flags: Type,
     hit_sound: HitSound,
-    end_time: i32,
+    end_time: i64,
     hit_sample: HitSample,
 }
 impl FromStr for Spinner {
@@ -1056,18 +1096,18 @@ impl FromStr for Spinner {
         let x = line
             .next()
             .expect("in x assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in x assignment in Spinner parsing");
+            .parse::<i64>()
+            .expect("in i64 parsing in x assignment in Spinner parsing");
         let y = line
             .next()
             .expect("in y assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in y assignment in Spinner parsing");
+            .parse::<i64>()
+            .expect("in i64 parsing in y assignment in Spinner parsing");
         let time = line
             .next()
             .expect("in time assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in time assignment in Spinner parsing");
+            .parse::<i64>()
+            .expect("in i64 parsing in time assignment in Spinner parsing");
         let flags = line
             .next()
             .expect("in flags assignment in Spinner parsing")
@@ -1081,8 +1121,8 @@ impl FromStr for Spinner {
         let end_time = line
             .next()
             .expect("in end_time assignment in Spinner parsing")
-            .parse::<i32>()
-            .expect("in i32 parsing in end_time assignment in Spinner parsing");
+            .parse::<i64>()
+            .expect("in i64 parsing in end_time assignment in Spinner parsing");
         Ok(Spinner {
             x,
             y,
@@ -1092,6 +1132,19 @@ impl FromStr for Spinner {
             end_time,
             hit_sample,
         })
+    }
+}
+impl Position for Spinner {
+    fn position(&self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+impl Time for Spinner {
+    fn time(&self) -> i64 {
+        self.time
     }
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -1104,44 +1157,44 @@ pub struct Type {
 impl FromStr for Type {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut num: i32 = s
+        let mut num: i64 = s
             .parse()
-            .expect("at num assignment and i32 parsing in Type parsing");
+            .expect("at num assignment and i64 parsing in Type parsing");
         let mut bits = [false; 8];
-        if num > 2_i32.pow(8) - 1 {
+        if num > 2_i64.pow(8) - 1 {
             panic!("Invalid Type");
         }
-        if num > 2_i32.pow(7) - 1 {
+        if num > 2_i64.pow(7) - 1 {
             bits[7] = true;
-            num -= 2_i32.pow(7);
+            num -= 2_i64.pow(7);
         }
-        if num > 2_i32.pow(6) - 1 {
+        if num > 2_i64.pow(6) - 1 {
             bits[6] = true;
-            num -= 2_i32.pow(6);
+            num -= 2_i64.pow(6);
         }
-        if num > 2_i32.pow(5) - 1 {
+        if num > 2_i64.pow(5) - 1 {
             bits[5] = true;
-            num -= 2_i32.pow(5);
+            num -= 2_i64.pow(5);
         }
-        if num > 2_i32.pow(4) - 1 {
+        if num > 2_i64.pow(4) - 1 {
             bits[4] = true;
-            num -= 2_i32.pow(4);
+            num -= 2_i64.pow(4);
         }
-        if num > 2_i32.pow(3) - 1 {
+        if num > 2_i64.pow(3) - 1 {
             bits[3] = true;
-            num -= 2_i32.pow(3);
+            num -= 2_i64.pow(3);
         }
-        if num > 2_i32.pow(2) - 1 {
+        if num > 2_i64.pow(2) - 1 {
             bits[2] = true;
-            num -= 2_i32.pow(2);
+            num -= 2_i64.pow(2);
         }
-        if num > 2_i32.pow(1) - 1 {
+        if num > 2_i64.pow(1) - 1 {
             bits[1] = true;
-            num -= 2_i32.pow(1);
+            num -= 2_i64.pow(1);
         }
-        if num > 2_i32.pow(0) - 1 {
+        if num > 2_i64.pow(0) - 1 {
             bits[0] = true;
-            num -= 2_i32.pow(0);
+            num -= 2_i64.pow(0);
         }
         if num > 0 {
             panic!("Logic error in Type creation")
@@ -1185,28 +1238,28 @@ pub struct HitSound {
 impl FromStr for HitSound {
     type Err = Box<dyn std::error::Error>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut num: i32 = s
+        let mut num: i64 = s
             .parse()
-            .expect("at num assignment and i32 parsing in HitSound parsing");
+            .expect("at num assignment and i64 parsing in HitSound parsing");
         let mut bits = [false; 8];
-        if num > 2_i32.pow(4) - 1 {
+        if num > 2_i64.pow(4) - 1 {
             panic!("Invalid HitSound: {}", s);
         }
-        if num > 2_i32.pow(3) - 1 {
+        if num > 2_i64.pow(3) - 1 {
             bits[3] = true;
-            num -= 2_i32.pow(3);
+            num -= 2_i64.pow(3);
         }
-        if num > 2_i32.pow(2) - 1 {
+        if num > 2_i64.pow(2) - 1 {
             bits[2] = true;
-            num -= 2_i32.pow(2);
+            num -= 2_i64.pow(2);
         }
-        if num > 2_i32.pow(1) - 1 {
+        if num > 2_i64.pow(1) - 1 {
             bits[1] = true;
-            num -= 2_i32.pow(1);
+            num -= 2_i64.pow(1);
         }
-        if num > 2_i32.pow(0) - 1 {
+        if num > 2_i64.pow(0) - 1 {
             bits[0] = true;
-            num -= 2_i32.pow(0);
+            num -= 2_i64.pow(0);
         }
         if num > 0 {
             panic!("Logic error in HitSound creation")
@@ -1259,8 +1312,8 @@ impl FromStr for HalfHitSample {
 pub struct HitSample {
     normal_set: SampleSet,
     addition_set: SampleSet,
-    index: i32,
-    volume: i32, // From 0 to 100.
+    index: i64,
+    volume: i64, // From 0 to 100.
     filename: Option<String>,
 }
 impl Default for HitSample {
@@ -1300,16 +1353,16 @@ impl FromStr for HitSample {
             .expect("at values assignment before index in HitSample parsing");
         let index = values
             .0
-            .parse::<i32>()
-            .expect("at index assignment with i32 parsing in HitSample parsing");
+            .parse::<i64>()
+            .expect("at index assignment with i64 parsing in HitSample parsing");
         let values = values
             .1
             .split_once(":")
             .expect("at values assignment before volume in HitSample parsing");
         let volume = values
             .0
-            .parse::<i32>()
-            .expect("at volume assignment with i32 parsing in HitSample parsing");
+            .parse::<i64>()
+            .expect("at volume assignment with i64 parsing in HitSample parsing");
         let filename = if values.1.trim().is_empty() {
             None
         } else {
@@ -1371,17 +1424,17 @@ impl FromStr for Curve {
                 x: pair
                     .next()
                     .expect("at x assignment in points pushing in Curve parsing")
-                    .parse::<i32>()
+                    .parse::<i64>()
                     .unwrap_or_else(|err| panic!(
-                        "at i32 parsing in x assignment in points pushing in Curve parsing: error: {} with input: {}",
+                        "at i64 parsing in x assignment in points pushing in Curve parsing: error: {} with input: {}",
                         err, s
                     )),
                 y: pair
                     .next()
                     .expect("at y assignment in points pushing in Curve parsing")
-                    .parse::<i32>()
+                    .parse::<i64>()
                     .unwrap_or_else(|err| panic!(
-                        "at i32 parsing in y assignment in points pushing in Curve parsing: error: {} with input: {}",
+                        "at i64 parsing in y assignment in points pushing in Curve parsing: error: {} with input: {}",
                         err, s
                     )),
             });
@@ -1410,8 +1463,63 @@ impl FromStr for CurveType {
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
+}
+impl Distance for Point {
+    fn distance(&self, other: &Self) -> f64 {
+        let delta_x = self.x - other.x;
+        let delta_y = self.y - other.y;
+        ((delta_x.pow(2) + delta_y.pow(2)) as f64).sqrt()
+    }
+}
+
+pub fn decimal_to_ratio(decimal: &str) -> Result<Ratio<i64>, Box<dyn std::error::Error>> {
+    // TODO: Switch from panics to errors
+    if decimal.is_empty() {
+        panic!("Empty str attempted to parse into ratio")
+    }
+    match decimal.matches('-').count() {
+        0 => {}
+        1 => {
+            if !decimal.starts_with('-') {
+                panic!(
+                    "Non-decimal str attempted to parse into ratio: Contains - sign in a location other than the start: {}", 
+                    decimal
+                )
+            }
+        }
+        _ => panic!(
+            "Non-decimal str attempted to parse into ratio: Contains more than one - sign: {}",
+            decimal
+        ),
+    }
+    if !decimal
+        .chars()
+        .all(|c| c.is_ascii_digit() | (c == '.') | (c == '-'))
+    {
+        panic!(
+            "Non-decimal str attempted to parse into ratio: Non-numeric characters present: {}",
+            decimal
+        )
+    }
+    match decimal.matches('.').count() {
+        0 => Ok(ratio!(decimal.parse::<i64>().unwrap())),
+        1 => {
+            let mut decimal = decimal.split('.');
+            let top = decimal.next().unwrap();
+            let bottom = decimal.next().unwrap();
+            let denom = 10_i64.pow(bottom.len() as u32);
+            let top = top.parse::<i64>().unwrap() * denom;
+            let bottom = bottom.parse::<i64>().unwrap();
+            let numer = top + bottom;
+            Ok(ratio!(numer, denom))
+        }
+        _ => panic!(
+            "Non-decimal str attempted to parse into ratio: Too many periods: {}",
+            decimal
+        ),
+    }
 }
 
 #[cfg(test)]
@@ -2353,6 +2461,23 @@ mod tests {
         }
         // Ensure panic on empty input.
         assert!(catch_unwind_silent(|| "".parse::<CurveType>()).is_err());
+    }
+    #[test]
+    fn test_decimal_to_ratio() {
+        let correct = [
+            ("2147483647", ratio!(2147483647)),
+            ("-2147483648", ratio!(-2147483648)),
+            ("0", ratio!(0)),
+            ("-0.0", ratio!(0)),
+            ("0.1", ratio!(1, 10)),
+            ("1000.1", ratio!(10001, 10)),
+            ("1.0000001", ratio!(10000001, 10000000)),
+        ];
+        let function = decimal_to_ratio;
+        for pair in correct {
+            assert_eq!(function(pair.0).unwrap(), pair.1);
+        }
+        // TODO: Implement panic test cases
     }
 
     fn catch_unwind_silent<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
