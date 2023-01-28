@@ -5,7 +5,7 @@
 extern crate num;
 
 use num::rational::Ratio;
-use std::{error::Error, str::FromStr};
+use std::str::FromStr;
 
 macro_rules! ratio {
     ($numer:expr) => {
@@ -17,10 +17,10 @@ macro_rules! ratio {
 }
 
 /// Parse a .osu file and return a MapData object
-pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
+pub fn parse_map(path: &std::path::Path) -> Result<Beatmap, String> {
     // Try to open file
     let mut file = match std::fs::File::open(path) {
-        Err(why) => panic!("couldn't open: {}", why),
+        Err(why) => return Result::Err(format!("couldn't open: {}", why)),
         Ok(file) => file,
     };
     let mut content = String::new();
@@ -42,7 +42,7 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
         content.contains("[HitObjects]"),
         ".osu file does not contain [HitObjects]"
     );
-    let mut map = MapData {
+    let mut map = Beatmap {
         ..Default::default()
     };
     let mut content = content.split("[Events]");
@@ -100,40 +100,48 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 map.letterbox_in_breaks = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!(
-                        "at map.letterbox_in_breaks assignment in tabular: \"{}\"",
-                        value
-                    ),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.letterbox_in_breaks assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "StoryFireInFront" => {
                 map.story_fire_in_front = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!(
-                        "at map.story_fire_in_front assignment in tabular: \"{}\"",
-                        value
-                    ),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.story_fire_in_front assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "UseSkinSprites" => {
                 map.use_skin_sprites = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!(
-                        "at map.use_skin_sprites assignment in tabular: \"{}\"",
-                        value
-                    ),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.use_skin_sprites assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "AlwaysShowPlayField" => {
                 map.always_show_play_field = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!(
-                        "at map.always_show_playfield assignment in tabular: \"{}\"",
-                        value
-                    ),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.always_show_playfield assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "OverlayPosition" => {
@@ -146,10 +154,12 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 map.epilepsy_warning = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!(
-                        "at map.epilepsy_warning assignment in tabular: \"{}\"",
-                        value
-                    ),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.epilepsy_warning assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "CountdownOffset" => {
@@ -161,27 +171,36 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                 map.special_style = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!("at map.special_style assignment in tabular: \"{}\"", value),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.special_style assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "WidescreenStoryboard" => {
                 map.widescreen_storyboard = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!(
-                        "at map.widescreen_storyboard assignment in tabular: \"{}\"",
-                        value
-                    ),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.widescreen_storyboard assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "SamplesMatchPlaybackRate" => {
                 map.samples_match_playback_rate = match value {
                     "1" => true,
                     "0" => false,
-                    _ => panic!(
-                        "at map.samples_match_playback_rate assignment in tabular: \"{}\"",
-                        value
-                    ),
+                    _ => {
+                        return Result::Err(format!(
+                            "at map.samples_match_playback_rate assignment in tabular: \"{}\"",
+                            value
+                        ))
+                    }
                 };
             }
             "Bookmarks" => {
@@ -277,7 +296,8 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
                     decimal_to_ratio(value).expect("at map.slider_tick_rate assignment in tabular"),
                 )
             }
-            _ => panic!("Unknown key: {}", key),
+            "EditorBookmarks" => {}
+            _ => return Result::Err(format!("Unknown key: {}", key)),
         }
     }
     let mut mixed = content
@@ -406,7 +426,7 @@ pub fn parse_map(path: &str) -> Result<MapData, Box<dyn Error>> {
 /// Complete map data for a .osu file.
 /// Arranged like map ver 14.
 #[derive(Debug, Clone, PartialEq)]
-pub struct MapData {
+pub struct Beatmap {
     pub file_format: i64,
     //[General]
     pub audio_filename: Option<String>,
@@ -469,7 +489,7 @@ pub struct MapData {
     //[HitObjects]
     pub hit_objects: Option<Vec<HitObject>>,
 }
-impl Default for MapData {
+impl Default for Beatmap {
     fn default() -> Self {
         Self {
             file_format: 14,
@@ -545,7 +565,7 @@ pub enum Countdown {
     Double,
 }
 impl FromStr for Countdown {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "0" => Ok(Countdown::None),
@@ -564,7 +584,7 @@ pub enum Mode {
     Mania,
 }
 impl FromStr for Mode {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "0" => Ok(Self::Osu),
@@ -582,7 +602,7 @@ pub enum OverlayPosition {
     Above,
 }
 impl FromStr for OverlayPosition {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "NoChange" => Ok(Self::NoChange),
@@ -599,7 +619,7 @@ pub struct Background {
     yoffset: i64,
 }
 impl FromStr for Background {
-    type Err = ();
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Background event
         let mut line = s.split(',').skip(2);
@@ -634,7 +654,7 @@ pub struct Break {
     end_time: i64,
 }
 impl FromStr for Break {
-    type Err = ();
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',').skip(1);
         let start_time = line
@@ -682,7 +702,7 @@ impl Default for TimingPoint {
     }
 }
 impl FromStr for TimingPoint {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.matches(',').count() {
             1 => {
@@ -700,6 +720,99 @@ impl FromStr for TimingPoint {
                 Ok(Self {
                     time,
                     beat_length,
+                    ..Default::default()
+                })
+            }
+            5 => {
+                let mut line = s.split(',');
+                let time = line
+                    .next()
+                    .expect("at time assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of time in TimingPoint parsing, 7 branch");
+                let beat_length = line
+                    .next()
+                    .expect("at beat_length assignment in TimingPoint parsing, 7 branch")
+                    .parse::<f64>()
+                    .expect("at f64 parsing of beat_length in TimingPoint parsing, 7 branch");
+                let meter = line
+                    .next()
+                    .expect("at meter assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of meter in TimingPoint parsing, 7 branch");
+                let sample_set = line
+                    .next()
+                    .expect("at sample_set assignment in TimingPoint parsing, 7 branch")
+                    .parse::<SampleSet>()
+                    .expect("at SampleSet parsing of sample_set in TimingPoint parsing, 7 branch");
+                let sample_index = line
+                    .next()
+                    .expect("at sample_index assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of sample_index in TimingPoint parsing, 7 branch");
+                //sample index
+                let volume = line
+                    .next()
+                    .expect("at volume assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of volume in TimingPoint parsing, 7 branch");
+                Ok(Self {
+                    time,
+                    beat_length,
+                    meter,
+                    sample_set,
+                    sample_index,
+                    volume,
+                    ..Default::default()
+                })
+            }
+            6 => {
+                let mut line = s.split(',');
+                let time = line
+                    .next()
+                    .expect("at time assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of time in TimingPoint parsing, 7 branch");
+                let beat_length = line
+                    .next()
+                    .expect("at beat_length assignment in TimingPoint parsing, 7 branch")
+                    .parse::<f64>()
+                    .expect("at f64 parsing of beat_length in TimingPoint parsing, 7 branch");
+                let meter = line
+                    .next()
+                    .expect("at meter assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of meter in TimingPoint parsing, 7 branch");
+                let sample_set = line
+                    .next()
+                    .expect("at sample_set assignment in TimingPoint parsing, 7 branch")
+                    .parse::<SampleSet>()
+                    .expect("at SampleSet parsing of sample_set in TimingPoint parsing, 7 branch");
+                let sample_index = line
+                    .next()
+                    .expect("at sample_index assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of sample_index in TimingPoint parsing, 7 branch");
+                //sample index
+                let volume = line
+                    .next()
+                    .expect("at volume assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of volume in TimingPoint parsing, 7 branch");
+                let uninherited = line
+                    .next()
+                    .expect("at uninherited assignment in TimingPoint parsing, 7 branch")
+                    .parse::<i64>()
+                    .expect("at i64 parsing of uninherited in TimingPoint parsing, 7 branch")
+                    == 1;
+                Ok(Self {
+                    time,
+                    beat_length,
+                    meter,
+                    sample_set,
+                    sample_index,
+                    volume,
+                    uninherited,
                     ..Default::default()
                 })
             }
@@ -758,7 +871,7 @@ impl FromStr for TimingPoint {
                     effects,
                 })
             }
-            _ => panic!("Invalid timing point: {}", s),
+            _ => return Result::Err(format!("Invalid timing point: {}", s)),
         }
     }
 }
@@ -769,14 +882,14 @@ pub struct Effects {
     ommit_barline: bool, // 4 on
 }
 impl FromStr for Effects {
-    type Err = ();
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (kiai, ommit_barline) = match s {
             "0" => (false, false),
             "1" => (true, false),
             "4" => (false, true),
             "5" => (true, true),
-            _ => panic!("Invalid effect"),
+            _ => return Result::Err(format!("Invalid effect")),
         };
         Ok(Self {
             kiai,
@@ -791,7 +904,7 @@ pub struct Color {
     blue: u8,
 }
 impl FromStr for Color {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s
             .split(" : ")
@@ -847,7 +960,7 @@ pub struct Circle {
     hit_sample: HitSample,
 }
 impl FromStr for Circle {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',');
         let hit_sample = HitSample {
@@ -924,7 +1037,7 @@ pub struct Slider {
     hit_sample: HitSample,
 }
 impl FromStr for Slider {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',');
         let x = line
@@ -961,10 +1074,12 @@ impl FromStr for Slider {
                 .expect("in curve assignment in Slider parsing")
                 .parse::<Curve>()
                 .expect("in Curve parsing in curve assignment in Slider parsing"),
-            _ => panic!(
-                "Invalid slider: wrong remaining line size: {} in line: {} at curve assignment",
-                commas, s
-            ),
+            _ => {
+                return Result::Err(format!(
+                    "Invalid slider: wrong remaining line size: {} in line: {} at curve assignment",
+                    commas, s
+                ))
+            }
         };
         let slides = match commas {
             3 | 4 | 6 => line
@@ -972,10 +1087,12 @@ impl FromStr for Slider {
                 .expect("in slides assignment in Slider parsing")
                 .parse::<i64>()
                 .expect("in i64 parsing in slides assignment in Slider parsing"),
-            _ => panic!(
+            _ => {
+                return Result::Err(format!(
                 "Invalid slider: wrong remaining line size: {} in line: {} at slides assignment",
                 commas, s
-            ),
+            ))
+            }
         };
         let length = match commas {
             3 | 4 | 6 => line
@@ -983,10 +1100,12 @@ impl FromStr for Slider {
                 .expect("in length assignment in Slider parsing")
                 .parse::<f64>()
                 .expect("in f64 parsing in length assignment in Slider parsing"),
-            _ => panic!(
+            _ => {
+                return Result::Err(format!(
                 "Invalid slider: wrong remaining line size: {} in line: {} at length assignment",
                 commas, s
-            ),
+            ))
+            }
         };
         let edge_sounds = match commas {
             4 | 6 => {
@@ -1087,7 +1206,7 @@ pub struct Spinner {
     hit_sample: HitSample,
 }
 impl FromStr for Spinner {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split(',');
         let hit_sample = HitSample {
@@ -1155,14 +1274,14 @@ pub struct Type {
                              // 7 Mania hold
 }
 impl FromStr for Type {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut num: i64 = s
             .parse()
             .expect("at num assignment and i64 parsing in Type parsing");
         let mut bits = [false; 8];
         if num > 2_i64.pow(8) - 1 {
-            panic!("Invalid Type");
+            return Result::Err(format!("Invalid Type"));
         }
         if num > 2_i64.pow(7) - 1 {
             bits[7] = true;
@@ -1197,7 +1316,7 @@ impl FromStr for Type {
             num -= 2_i64.pow(0);
         }
         if num > 0 {
-            panic!("Logic error in Type creation")
+            return Result::Err(format!("Logic error in Type creation"));
         }
         let mut color_skip = 0;
         if bits[4] {
@@ -1213,7 +1332,12 @@ impl FromStr for Type {
             (true, false, false) => ObjectType::Circle,
             (false, true, false) => ObjectType::Slider,
             (false, false, true) => ObjectType::Spinner,
-            _ => panic!("Invalid object type: {:?}", (bits[0], bits[1], bits[3])),
+            _ => {
+                return Result::Err(format!(
+                    "Invalid object type: {:?}",
+                    (bits[0], bits[1], bits[3])
+                ))
+            }
         };
         Ok(Self {
             object_type,
@@ -1236,14 +1360,14 @@ pub struct HitSound {
     clap: bool,
 }
 impl FromStr for HitSound {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut num: i64 = s
             .parse()
             .expect("at num assignment and i64 parsing in HitSound parsing");
         let mut bits = [false; 8];
         if num > 2_i64.pow(4) - 1 {
-            panic!("Invalid HitSound: {}", s);
+            return Result::Err(format!("Invalid HitSound: {}", s));
         }
         if num > 2_i64.pow(3) - 1 {
             bits[3] = true;
@@ -1262,7 +1386,7 @@ impl FromStr for HitSound {
             num -= 2_i64.pow(0);
         }
         if num > 0 {
-            panic!("Logic error in HitSound creation")
+            return Result::Err(format!("Logic error in HitSound creation"));
         }
         Ok(Self {
             normal: bits[0],
@@ -1286,10 +1410,10 @@ impl Default for HalfHitSample {
     }
 }
 impl FromStr for HalfHitSample {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if !(s.matches(':').count() == 1) {
-            panic!("Invalid HalfHitSample: {}", s)
+            return Result::Err(format!("Invalid HalfHitSample: {}", s));
         }
         let mut values = s.split(':');
         let normal_set = values
@@ -1328,46 +1452,68 @@ impl Default for HitSample {
     }
 }
 impl FromStr for HitSample {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let values = s
-            .split_once(":")
-            .expect("at values assignment before normal_set in HitSample parsing");
+        let mut volume = 0;
+        let mut filename = None;
+
+        let mut values = match s.split_once(":") {
+            Some(value) => value,
+            None => {
+                return Result::Err(format!(
+                    "at values assignment before normal_set in HitSample parsing: {}",
+                    s
+                ))
+            }
+        };
         let normal_set = values
             .0
             .parse::<SampleSet>()
             .expect("at normal_set assignment with SampleSet parsing in HitSample parsing");
-        let values = values.1.split_once(":").unwrap_or_else(|| {
-            panic!(
-                "at values assignment before addition_set in HitSample parsing: err: {}",
-                s
-            )
-        });
+        values = match values.1.split_once(":") {
+            Some(value) => value,
+            None => {
+                return Result::Err(format!(
+                    "at values assignment before addition_set in HitSample parsing: {}",
+                    s
+                ))
+            }
+        };
         let addition_set = values
             .0
             .parse::<SampleSet>()
             .expect("at addition_set assignment with SampleSet parsing in HitSample parsing");
-        let values = values
-            .1
-            .split_once(":")
-            .expect("at values assignment before index in HitSample parsing");
+        values = match values.1.split_once(":") {
+            Some(value) => value,
+            None => {
+                return Result::Err(format!(
+                    "at values assignment before index in HitSample parsing: {}",
+                    s
+                ))
+            }
+        };
         let index = values
             .0
             .parse::<i64>()
             .expect("at index assignment with i64 parsing in HitSample parsing");
-        let values = values
-            .1
-            .split_once(":")
-            .expect("at values assignment before volume in HitSample parsing");
-        let volume = values
-            .0
-            .parse::<i64>()
-            .expect("at volume assignment with i64 parsing in HitSample parsing");
-        let filename = if values.1.trim().is_empty() {
-            None
-        } else {
-            Some(values.1.to_string())
-        };
+        if s.matches(':').count() > 3 {
+            values = match values.1.split_once(":") {
+                Some(value) => value,
+                None => {
+                    return Result::Err(format!(
+                        "at values assignment before volume in HitSample parsing: {}",
+                        s
+                    ))
+                }
+            };
+            volume = values
+                .0
+                .parse::<i64>()
+                .expect("at volume assignment with i64 parsing in HitSample parsing");
+        }
+        if (s.matches(':').count() > 3) & !values.1.trim().is_empty() {
+            filename = Some(values.1.to_string());
+        }
         Ok(Self {
             normal_set,
             addition_set,
@@ -1385,14 +1531,14 @@ pub enum SampleSet {
     Drum,
 }
 impl FromStr for SampleSet {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "0" | "Default" => Ok(SampleSet::Default),
             "1" | "Normal" => Ok(SampleSet::Normal),
             "2" | "Soft" => Ok(SampleSet::Soft),
             "3" | "Drum" => Ok(SampleSet::Drum),
-            _ => panic!("Invalid str during SampleSet parsing: {}", s),
+            _ => return Result::Err(format!("Invalid str during SampleSet parsing: {}", s)),
         }
     }
 }
@@ -1402,7 +1548,7 @@ pub struct Curve {
     points: Vec<Point>,
 }
 impl FromStr for Curve {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut line = s.split('|');
         let _type = line
@@ -1415,28 +1561,35 @@ impl FromStr for Curve {
         for pair in line {
             match (_type, count) {
                 (CurveType::Perfect, 2) => {
-                    panic!("Invalid Curve: Perfect curve {} has more than 2 points", s)
+                    return Result::Err(format!(
+                        "Invalid Curve: Perfect curve {} has more than 2 points",
+                        s
+                    ))
                 }
                 _ => count += 1,
             }
             let mut pair = pair.split(':');
             points.push(Point {
-                x: pair
+                x: match pair
                     .next()
                     .expect("at x assignment in points pushing in Curve parsing")
-                    .parse::<i64>()
-                    .unwrap_or_else(|err| panic!(
-                        "at i64 parsing in x assignment in points pushing in Curve parsing: error: {} with input: {}",
-                        err, s
-                    )),
-                y: pair
+                    .parse::<i64>() {
+                        Ok(x) => x,
+                        Err(error) => return Result::Err(format!(
+                                "at i64 parsing in x assignment in points pushing in Curve parsing: error: {} with input: {}",
+                                error, s
+                        )),
+                },
+                y: match pair
                     .next()
                     .expect("at y assignment in points pushing in Curve parsing")
-                    .parse::<i64>()
-                    .unwrap_or_else(|err| panic!(
-                        "at i64 parsing in y assignment in points pushing in Curve parsing: error: {} with input: {}",
-                        err, s
-                    )),
+                    .parse::<i64>() {
+                        Ok(y) => y,
+                        Err(error) => return Result::Err(format!(
+                            "at i64 parsing in y assignment in points pushing in Curve parsing: error: {} with input: {}",
+                            error, s
+                        )),
+                },
             });
         }
         Ok(Self { _type, points })
@@ -1450,14 +1603,14 @@ pub enum CurveType {
     Perfect,
 }
 impl FromStr for CurveType {
-    type Err = Box<dyn std::error::Error>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "B" => Ok(Self::Bezier),
             "C" => Ok(Self::Centripetal),
             "L" => Ok(Self::Linear),
             "P" => Ok(Self::Perfect),
-            _ => panic!("Invalid CurveType: {}", s),
+            _ => return Result::Err(format!("Invalid CurveType: {}", s)),
         }
     }
 }
@@ -1474,34 +1627,36 @@ impl Distance for Point {
     }
 }
 
-pub fn decimal_to_ratio(decimal: &str) -> Result<Ratio<i64>, Box<dyn std::error::Error>> {
+pub fn decimal_to_ratio(decimal: &str) -> Result<Ratio<i64>, String> {
     // TODO: Switch from panics to errors
     if decimal.is_empty() {
-        panic!("Empty str attempted to parse into ratio")
+        return Result::Err(format!("Empty str attempted to parse into ratio"));
     }
     match decimal.matches('-').count() {
         0 => {}
         1 => {
             if !decimal.starts_with('-') {
-                panic!(
+                return Result::Err(format!(
                     "Non-decimal str attempted to parse into ratio: Contains - sign in a location other than the start: {}", 
                     decimal
-                )
+                ));
             }
         }
-        _ => panic!(
-            "Non-decimal str attempted to parse into ratio: Contains more than one - sign: {}",
-            decimal
-        ),
+        _ => {
+            return Result::Err(format!(
+                "Non-decimal str attempted to parse into ratio: Contains more than one - sign: {}",
+                decimal
+            ))
+        }
     }
     if !decimal
         .chars()
         .all(|c| c.is_ascii_digit() | (c == '.') | (c == '-'))
     {
-        panic!(
+        return Result::Err(format!(
             "Non-decimal str attempted to parse into ratio: Non-numeric characters present: {}",
             decimal
-        )
+        ));
     }
     match decimal.matches('.').count() {
         0 => Ok(ratio!(decimal.parse::<i64>().unwrap())),
@@ -1515,10 +1670,12 @@ pub fn decimal_to_ratio(decimal: &str) -> Result<Ratio<i64>, Box<dyn std::error:
             let numer = top + bottom;
             Ok(ratio!(numer, denom))
         }
-        _ => panic!(
-            "Non-decimal str attempted to parse into ratio: Too many periods: {}",
-            decimal
-        ),
+        _ => {
+            return Result::Err(format!(
+                "Non-decimal str attempted to parse into ratio: Too many periods: {}",
+                decimal
+            ))
+        }
     }
 }
 
@@ -1526,6 +1683,20 @@ pub fn decimal_to_ratio(decimal: &str) -> Result<Ratio<i64>, Box<dyn std::error:
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_parse_map() {
+        let test_maps = std::fs::read_dir("test_maps").unwrap();
+        for file in test_maps {
+            let path = file.unwrap().path();
+            if let Err(error) = parse_map(&path) {
+                panic!(
+                    "Error parsing test map \"{}\" with error: {}",
+                    path.to_str().unwrap(),
+                    error
+                )
+            }
+        }
+    }
     #[test]
     fn slider_parse() {
         // Linear slider from ver 14.
@@ -2457,9 +2628,15 @@ mod tests {
         // Ensure that there is no trim during parsing.
         let no_trim = [" B", " C", " L", " P", "B ", "C ", "L ", "P "];
         for line in no_trim {
-            assert!(catch_unwind_silent(|| line.parse::<CurveType>()).is_err());
+            if let Ok(_) = line.parse::<CurveType>() {
+                panic!(
+                    "curve_type_parse did not return error on bad input: {}",
+                    line
+                )
+            }
         }
         // Ensure panic on empty input.
+        // TODO: Convert all catch_unwind_silent to error catchers
         assert!(catch_unwind_silent(|| "".parse::<CurveType>()).is_err());
     }
     #[test]
