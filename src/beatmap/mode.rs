@@ -13,7 +13,7 @@ impl std::str::FromStr for Mode {
             "1" => Ok(Self::Taiko),
             "2" => Ok(Self::Catch),
             "3" => Ok(Self::Mania),
-            _ => Err("Invalid Mode".into()),
+            _ => Err(format!("invalid mode {s}")),
         }
     }
 }
