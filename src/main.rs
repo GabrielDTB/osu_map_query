@@ -3,6 +3,7 @@
 pub mod analysis;
 pub mod beatmap;
 pub mod minimal_beatmap;
+pub mod refactor;
 pub mod utility;
 //use std::path::Path;
 
