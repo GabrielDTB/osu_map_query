@@ -1,6 +1,22 @@
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Difficulty {
-    // pub hpdrain_rate: Option<Ratio<i64>>,
-    // pub circle_size: Option<Ratio<i64>>,
-    // pub overall_difficulty: Option<Ratio<i64>>,
-    // pub approach_rate: Option<Ratio<i64>>,
+    circle_size: u8,
+    hpdrain_rate: u8,
+    overall_difficulty: u8,
+    approach_rate: u8,
+}
+impl Difficulty {
+    pub fn new(
+        circle_size: u8,
+        hpdrain_rate: u8,
+        overall_difficulty: u8,
+        approach_rate: u8,
+    ) -> Self {
+        Self {
+            circle_size,
+            hpdrain_rate,
+            overall_difficulty,
+            approach_rate,
+        }
+    }
 }
