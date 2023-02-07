@@ -1,5 +1,16 @@
 extern crate num;
 
+use num::rational::Ratio;
+
+macro_rules! ratio {
+    ($numer:expr) => {
+        num::rational::Ratio::from_integer($numer)
+    };
+    ($numer:expr, $denom:expr) => {
+        num::rational::Ratio::new($numer, $denom)
+    };
+}
+
 impl Default for Beatmap {
     fn default() -> Self {
         Self {
