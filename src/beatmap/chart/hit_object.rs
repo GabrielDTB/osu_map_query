@@ -1,6 +1,5 @@
 pub mod _type;
 pub mod circle;
-pub mod curve;
 pub mod hit_sample;
 pub mod hit_sound;
 pub mod slider;

@@ -1,9 +1,11 @@
+pub mod curve;
+
 use super::_type::Type;
-use super::curve::Curve;
 use super::hit_sample::{HalfHitSample, HitSample};
 use super::hit_sound::HitSound;
 use super::traits::Position;
 use super::traits::Time;
+use curve::Curve;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Slider {

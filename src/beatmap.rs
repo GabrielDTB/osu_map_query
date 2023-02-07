@@ -6,6 +6,7 @@ pub mod filedata;
 pub mod metadata;
 pub mod mode;
 pub mod parse;
+pub mod shared;
 
 use chart::Chart;
 use customization::Customization;

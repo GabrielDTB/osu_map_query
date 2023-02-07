@@ -4,6 +4,7 @@ pub mod color;
 pub mod countdown;
 pub mod overlay_position;
 
+use super::shared::sample_set::SampleSet;
 use _break::Break;
 use background::Background;
 use countdown::Countdown;

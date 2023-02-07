@@ -4,7 +4,7 @@ pub enum OverlayPosition {
     Below,
     Above,
 }
-impl FromStr for OverlayPosition {
+impl std::str::FromStr for OverlayPosition {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {

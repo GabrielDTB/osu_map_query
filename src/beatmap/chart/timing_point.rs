@@ -1,8 +1,7 @@
 pub mod effects;
-pub mod sample_set;
 
+use super::super::shared::sample_set::SampleSet;
 use effects::Effects;
-use sample_set::SampleSet;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TimingPoint {
