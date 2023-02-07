@@ -1,3 +1,7 @@
+// Screen size: 640x480 osu px
+// Play area: 510x385 osu px
+// Center of playfield: 256x192 osu px
+
 extern crate num;
 
 use num::rational::Ratio;

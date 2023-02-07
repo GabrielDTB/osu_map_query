@@ -5,6 +5,7 @@ pub mod editor;
 pub mod filedata;
 pub mod metadata;
 pub mod mode;
+pub mod parse;
 
 use chart::Chart;
 use customization::Customization;

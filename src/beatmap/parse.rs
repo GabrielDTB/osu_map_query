@@ -1,19 +1,78 @@
-// Screen size: 640x480 osu px
-// Play area: 510x385 osu px
-// Center of playfield: 256x192 osu px
-
 extern crate num;
 
-use num::rational::Ratio;
-use std::str::FromStr;
+impl Default for Beatmap {
+    fn default() -> Self {
+        Self {
+            file_format: 14,
 
-macro_rules! ratio {
-    ($numer:expr) => {
-        num::rational::Ratio::from_integer($numer)
-    };
-    ($numer:expr, $denom:expr) => {
-        num::rational::Ratio::new($numer, $denom)
-    };
+            //[General]
+            audio_filename: None,
+            audio_lead_in: 0,
+            audio_hash: None, // Deprecated
+            preview_time: -1,
+            countdown: Countdown::Normal,
+            sample_set: SampleSet::Normal,
+            stack_leniency: ratio!(7, 10),
+            mode: Mode::Osu,
+            letterbox_in_breaks: false,
+            story_fire_in_front: true, // Deprecated
+            use_skin_sprites: false,
+            always_show_play_field: false, // Deprecated
+            overlay_position: OverlayPosition::NoChange,
+            skin_preference: None,
+            epilepsy_warning: false,
+            countdown_offset: 0,
+            special_style: false,
+            widescreen_storyboard: false,
+            samples_match_playback_rate: false,
+
+            //[Editor]
+            bookmarks: None,
+            distance_spacing: None,
+            beat_divisor: None,
+            grid_size: None,
+            timeline_zoom: None,
+
+            //[Metadata]
+            title: None,
+            title_unicode: None,
+            artist: None,
+            artist_unicode: None,
+            creator: None,
+            version: None,
+            source: None,
+            tags: None,
+            beatmap_id: None,
+            beatmap_set_id: None,
+
+            //[Difficulty]
+            hpdrain_rate: None,
+            circle_size: None,
+            overall_difficulty: None,
+            approach_rate: None,
+            slider_multiplier: None,
+            slider_tick_rate: None,
+
+            //[Events]
+            // I will be omitting the story board events because they are complicated.
+            background: None,
+            breaks: None,
+
+            //[TimingPoints]
+            timing_points: None,
+
+            //[Colo*rs]
+            colors: None,
+            //[HitObjects]
+            hit_objects: None,
+        }
+    }
+}
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ObjectType {
+    Circle,
+    Slider,
+    Spinner,
 }
 
 /// Parse a .osu file and return a MapData object
@@ -421,216 +480,6 @@ pub fn parse_map(path: &std::path::Path) -> Result<Beatmap, String> {
     // Verify hit objects
 
     Ok(map)
-}
-
-impl Default for Beatmap {
-    fn default() -> Self {
-        Self {
-            file_format: 14,
-
-            //[General]
-            audio_filename: None,
-            audio_lead_in: 0,
-            audio_hash: None, // Deprecated
-            preview_time: -1,
-            countdown: Countdown::Normal,
-            sample_set: SampleSet::Normal,
-            stack_leniency: ratio!(7, 10),
-            mode: Mode::Osu,
-            letterbox_in_breaks: false,
-            story_fire_in_front: true, // Deprecated
-            use_skin_sprites: false,
-            always_show_play_field: false, // Deprecated
-            overlay_position: OverlayPosition::NoChange,
-            skin_preference: None,
-            epilepsy_warning: false,
-            countdown_offset: 0,
-            special_style: false,
-            widescreen_storyboard: false,
-            samples_match_playback_rate: false,
-
-            //[Editor]
-            bookmarks: None,
-            distance_spacing: None,
-            beat_divisor: None,
-            grid_size: None,
-            timeline_zoom: None,
-
-            //[Metadata]
-            title: None,
-            title_unicode: None,
-            artist: None,
-            artist_unicode: None,
-            creator: None,
-            version: None,
-            source: None,
-            tags: None,
-            beatmap_id: None,
-            beatmap_set_id: None,
-
-            //[Difficulty]
-            hpdrain_rate: None,
-            circle_size: None,
-            overall_difficulty: None,
-            approach_rate: None,
-            slider_multiplier: None,
-            slider_tick_rate: None,
-
-            //[Events]
-            // I will be omitting the story board events because they are complicated.
-            background: None,
-            breaks: None,
-
-            //[TimingPoints]
-            timing_points: None,
-
-            //[Colo*rs]
-            colors: None,
-            //[HitObjects]
-            hit_objects: None,
-        }
-    }
-}
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Countdown {
-    None,
-    Normal,
-    Half,
-    Double,
-}
-impl FromStr for Countdown {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "0" => Ok(Countdown::None),
-            "1" => Ok(Countdown::Normal),
-            "2" => Ok(Countdown::Half),
-            "3" => Ok(Countdown::Double),
-            _ => Err("Invalid Countdown".into()),
-        }
-    }
-}
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum OverlayPosition {
-    NoChange,
-    Below,
-    Above,
-}
-impl FromStr for OverlayPosition {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "NoChange" => Ok(Self::NoChange),
-            "Below" => Ok(Self::Below),
-            "Above" => Ok(Self::Above),
-            _ => Err("Invalid OverlayPosition".into()),
-        }
-    }
-}
-#[derive(Debug, Clone, PartialEq)]
-pub struct Background {
-    filename: String,
-    xoffset: i64,
-    yoffset: i64,
-}
-impl FromStr for Background {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Background event
-        let mut line = s.split(',').skip(2);
-        let mut background = line
-            .next()
-            .expect("at background assignment in Background parsing")
-            .chars();
-        background.next();
-        background.next_back();
-        // Remove quotes
-        let background = background.as_str().to_string();
-        let x = line
-            .next()
-            .unwrap_or("0")
-            .parse::<i64>()
-            .expect("at x assignment in Background parsing");
-        let y = line
-            .next()
-            .unwrap_or("0")
-            .parse::<i64>()
-            .expect("at y assignment in Background parsing");
-        Ok(Self {
-            filename: background,
-            xoffset: x,
-            yoffset: y,
-        })
-    }
-}
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Break {
-    start_time: i64,
-    end_time: i64,
-}
-impl FromStr for Break {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut line = s.split(',').skip(1);
-        let start_time = line
-            .next()
-            .expect("at start_time assignment in Break parsing")
-            .parse::<i64>()
-            .expect("at i64 parsing of start_time in Break parsing");
-        let end_time = line
-            .next()
-            .expect("at end_time assignment in Break parsing")
-            .parse::<i64>()
-            .expect("at i64 parsing of end_time in Break parsing");
-        Ok(Self {
-            start_time,
-            end_time,
-        })
-    }
-}
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Color {
-    red: u8,
-    green: u8,
-    blue: u8,
-}
-impl FromStr for Color {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut line = s
-            .split(" : ")
-            .skip(1)
-            .next()
-            .expect("at line assignment in Color parsing")
-            .split(',');
-        let red = line
-            .next()
-            .expect("in red assignment in Color parsing")
-            .parse::<u8>()
-            .expect("at u8 parsing of red in Color parsing");
-        let green = line
-            .next()
-            .expect("in green assignment in Color parsing")
-            .parse::<u8>()
-            .expect("at u8 parsing of green in Color parsing");
-        let blue = line
-            .next()
-            .expect("in blue assignment in Color parsing")
-            .parse::<u8>()
-            .expect("at u8 parsing of blue in Color parsing");
-        Ok(Self { red, green, blue })
-    }
-}
-impl Color {
-    pub fn tuple(&self) -> (u8, u8, u8) {
-        (self.red, self.green, self.blue)
-    }
-}
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ObjectType {
-    Circle,
-    Slider,
-    Spinner,
 }
 
 pub fn decimal_to_ratio(decimal: &str) -> Result<Ratio<i64>, String> {
