@@ -1,3 +1,9 @@
+pub mod effects;
+pub mod sample_set;
+
+use effects::Effects;
+use sample_set::SampleSet;
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TimingPoint {
     time: i64,
