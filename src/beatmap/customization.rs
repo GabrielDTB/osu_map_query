@@ -25,4 +25,5 @@ pub struct Customization {
     pub samples_match_playback_rate: Option<bool>,
     pub background: Option<Background>,
     pub breaks: Option<Vec<Break>>,
+    pub colors: Option<Vec<color::Color>>,
 }
