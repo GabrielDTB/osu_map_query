@@ -9,12 +9,16 @@ pub mod parse;
 pub mod shared;
 
 use chart::Chart;
-use customization::Customization;
+use customization::countdown::Countdown;
+use customization::overlay_position::OverlayPosition;
+use customization::*;
 use difficulty::Difficulty;
 use editor::Editor;
 use filedata::Filedata;
 use metadata::Metadata;
 use mode::Mode;
+use rayon::prelude::*;
+use shared::sample_set::SampleSet;
 
 pub struct Beatmap {
     mode: Option<Mode>,
@@ -50,168 +54,67 @@ impl Beatmap {
                 error
             ),
         };
-        let mut lines = content.lines().map(|s| s.trim()).filter(|s| !s.is_empty());
-
-        let mut file_format = None;
-        // Parse header
-        loop {
-            let line = match lines.next() {
-                None => {
-                    return Result::Err(format!(
-                        "unexpected end of file while parsing header section of {}",
-                        path.display()
-                    ))
-                }
-                Some(line) => line,
-            };
-            if line == "[General]" {
-                break;
-            }
-            if line.contains("format") {
-                // rewrite to use errors instead of unwrap
-                file_format = Some(line.split_once("v").unwrap().1.parse::<u8>().unwrap());
-            }
+        // Find which sections exist in the file
+        fn is_in(sub: &str, content: &String) -> bool {
+            content.contains(sub)
         }
-
-        // Parse general
-        let mut next_section_is_editor = true;
-        loop {
-            let line = match lines.next() {
-                None => {
-                    return Result::Err(format!(
-                        "unexpected end of file while parsing general section of {}",
-                        path.display()
-                    ))
-                }
-                Some(line) => line,
-            };
-            if line == "[Editor]" {
-                break;
-            } else if line == "[Metadata]" {
-                next_section_is_editor = false;
-                break;
-            }
-            // Do real parsing here
+        let all_sections = [
+            "[General]",
+            "[Editor]",
+            "[Metadata]",
+            "[Difficulty]",
+            "[Events]",
+            "[TimingPoints]",
+            "[Colours]",
+            "[HitObjects]",
+        ];
+        let existing_sections: Vec<&str> = all_sections
+            .into_par_iter()
+            .filter(|sub| is_in(sub, &content))
+            .collect();
+        // Split the file into sections
+        let mut split_sections = Vec::with_capacity(9);
+        let mut remainder = content.as_str();
+        for section in existing_sections {
+            let (split, rest) = remainder.split_once(section).unwrap();
+            split_sections.push(split);
+            remainder = rest;
         }
-
-        // Parse editor
-        if next_section_is_editor {
-            loop {
-                let line = match lines.next() {
-                    None => {
-                        return Result::Err(format!(
-                            "unexpected end of file while parsing editor section of {}",
-                            path.display()
-                        ))
-                    }
-                    Some(line) => line,
-                };
-                if line == "[Metadata]" {
-                    break;
-                }
-                // Do real parsing here
+        split_sections.push(remainder);
+        let split_sections: Vec<Vec<&str>> = split_sections
+            .into_par_iter()
+            .map(|s| {
+                s.par_lines()
+                    .map(|l| l.trim())
+                    .filter(|l| !l.is_empty())
+                    .collect::<Vec<&str>>() // Remove empty lines and trim whitespace
+            })
+            .collect();
+        existing_sections.insert(0, "Preamble");
+        // Parse each section in parallel
+        fn delegate(heading: &str, content: Vec<&str>) -> Result<ReturnKey, String> {
+            match heading {
+                "Preamble" => Ok(ReturnKey::Preamble(parse_preamble(content))),
+                "General" => Ok(ReturnKey::General(parse_general(content))),
+                "Editor" => Ok(ReturnKey::Editor(parse_editor(content))),
+                "Metadata" => Ok(ReturnKey::Metadata(parse_metadata(content))),
+                "Difficulty" => Ok(ReturnKey::Difficulty(parse_difficulty(content))),
+                "Events" => Ok(ReturnKey::Events(parse_events(content))),
+                "TimingPoints" => Ok(ReturnKey::TimingPoints(parse_timing_points(content))),
+                "Colours" => Ok(ReturnKey::Colours(parse_colours(content))),
+                "HitObjects" => Ok(ReturnKey::HitObjects(parse_hit_objects(content))),
+                _ => Err(format!("Unknown section: {}", heading)),
             }
         }
-
-        // Parse metadata
-        loop {
-            let line = match lines.next() {
-                None => {
-                    return Result::Err(format!(
-                        "unexpected end of file while parsing metadata section of {}",
-                        path.display()
-                    ))
-                }
-                Some(line) => line,
-            };
-            if line == "[Difficulty]" {
-                break;
-            }
-            // Do real parsing here
-        }
-
-        // Parse difficulty
-        loop {
-            let line = match lines.next() {
-                None => {
-                    return Result::Err(format!(
-                        "unexpected end of file while parsing difficulty section of {}",
-                        path.display()
-                    ))
-                }
-                Some(line) => line,
-            };
-            if line == "[Events]" {
-                break;
-            }
-            // Do real parsing here
-        }
-
-        // Parse events
-        loop {
-            let line = match lines.next() {
-                None => {
-                    return Result::Err(format!(
-                        "unexpected end of file while parsing events section of {}",
-                        path.display()
-                    ))
-                }
-                Some(line) => line,
-            };
-            if line == "[TimingPoints]" {
-                break;
-            }
-            // Do real parsing here
-        }
-
-        // Parse timing points
-        let next_section_is_colours = true;
-        loop {
-            let line = match lines.next() {
-                None => {
-                    return Result::Err(format!(
-                        "unexpected end of file while parsing timing points section of {}",
-                        path.display()
-                    ))
-                }
-                Some(line) => line,
-            };
-            if line == "[Colours]" {
-                break;
-            } else if line == "[HitObjects]" {
-                next_section_is_colours = false;
-                break;
-            }
-            // Do real parsing here
-        }
-
-        // Parse colours
-        if next_section_is_colours {
-            loop {
-                let line = match lines.next() {
-                    None => {
-                        return Result::Err(format!(
-                            "unexpected end of file while parsing colours section of {}",
-                            path.display()
-                        ))
-                    }
-                    Some(line) => line,
-                };
-                if line == "[HitObjects]" {
-                    break;
-                }
-                // Do real parsing here
-            }
-        }
-
-        // Parse hit objects
-        loop {
-            let line = match lines.next() {
-                None => break,
-                Some(line) => line,
-            };
-            // Do real parsing here
-        }
+        let parsed_sections =
+            existing_sections
+                .into_par_iter()
+                .zip(split_sections)
+                .map(|(h, c)| {
+                    delegate(h, c).unwrap_or_else(|e| {
+                        panic!("Error parsing section '{}': {}", h, e.to_string())
+                    })
+                });
 
         Ok(Beatmap {
             mode: None,
@@ -224,3 +127,150 @@ impl Beatmap {
         })
     }
 }
+
+fn parse_preamble(content: Vec<&str>) -> Vec<PreambleKey> {
+    vec![PreambleKey::FileFormat(14)]
+}
+fn parse_general(content: Vec<&str>) -> Vec<GeneralKey> {
+    vec![GeneralKey::AudioFilename("".to_string())]
+}
+fn parse_editor(content: Vec<&str>) -> Vec<EditorKey> {
+    vec![EditorKey::None]
+}
+fn parse_metadata(content: Vec<&str>) -> Vec<MetadataKey> {
+    vec![MetadataKey::None]
+}
+fn parse_difficulty(content: Vec<&str>) -> Vec<DifficultyKey> {
+    vec![DifficultyKey::None]
+}
+fn parse_events(content: Vec<&str>) -> Vec<EventsKey> {
+    vec![EventsKey::None]
+}
+fn parse_timing_points(content: Vec<&str>) -> Vec<TimingPointsKey> {
+    vec![TimingPointsKey::None]
+}
+fn parse_colours(content: Vec<&str>) -> Vec<ColoursKey> {
+    vec![ColoursKey::None]
+}
+fn parse_hit_objects(content: Vec<&str>) -> Vec<HitObjectsKey> {
+    vec![HitObjectsKey::None]
+}
+
+enum ReturnKey {
+    Preamble(Vec<PreambleKey>),
+    General(Vec<GeneralKey>),
+    Editor(Vec<EditorKey>),
+    Metadata(Vec<MetadataKey>),
+    Difficulty(Vec<DifficultyKey>),
+    Events(Vec<EventsKey>),
+    TimingPoints(Vec<TimingPointsKey>),
+    Colours(Vec<ColoursKey>),
+    HitObjects(Vec<HitObjectsKey>),
+}
+
+enum PreambleKey {
+    FileFormat(u8),
+}
+
+enum GeneralKey {
+    AudioFilename(String),
+    AudioLeadIn(i64),
+    AudioHash(String), // Deprecated
+    PreviewTime(i64),
+    Countdown(Countdown),
+    SampleSet(SampleSet),
+    StackLeniency(u8),
+    Mode(Mode),
+    LetterboxInBreaks(bool),
+    StoryFireInFront(bool), // Deprecated
+    UseSkinSprites(bool),
+    AlwaysShowPlayField(bool), // Deprecated
+    OverlayPosition(OverlayPosition),
+    SkinPreference(String),
+    EpilepsyWarning(bool),
+    CountdownOffset(i64),
+    SpecialStyle(bool),
+    WidescreenStoryboard(bool),
+    SamplesMatchPlaybackRate(bool),
+}
+
+enum EditorKey {
+    None,
+}
+
+enum MetadataKey {
+    None,
+}
+
+enum DifficultyKey {
+    None,
+}
+
+enum EventsKey {
+    None,
+}
+
+enum TimingPointsKey {
+    None,
+}
+
+enum ColoursKey {
+    None,
+}
+
+enum HitObjectsKey {
+    None,
+}
+
+// enum PreambleKey {
+// FileFormat(u8),
+// }
+
+// enum GeneralKey {
+// AudioFilename(&str),
+// AudioLeadIn(i64),
+// AudioHash(&str), // Deprecated
+// PreviewTime(i64),
+// Countdown(Countdown),
+// SampleSet(SampleSet),
+// StackLeniency(),
+// mode: Mode::Osu,
+// letterbox_in_breaks: false,
+// story_fire_in_front: true, // Deprecated
+// use_skin_sprites: false,
+// always_show_play_field: false, // Deprecated
+// overlay_position: OverlayPosition::NoChange,
+// skin_preference: None,
+// epilepsy_warning: false,
+// countdown_offset: 0,
+// special_style: false,
+// widescreen_storyboard: false,
+// samples_match_playback_rate: false,
+// }
+// enum EditorKey {
+// bookmarks: None,
+// distance_spacing: None,
+// beat_divisor: None,
+// grid_size: None,
+// timeline_zoom: None,
+// }
+// enum MetadataKey {
+// title: None,
+// title_unicode: None,
+// artist: None,
+// artist_unicode: None,
+// creator: None,
+// version: None,
+// source: None,
+// tags: None,
+// beatmap_id: None,
+// beatmap_set_id: None,
+// }
+// enum DifficultyKey {
+// HPDrainRate: u8,
+// CircleSize: u8,
+// OverallDifficulty: u8,
+// ApproachRate: u8,
+// SliderMultiplier: Ratio<i64>,
+// SliderTickRate: Ratio<i64>,
+// }
